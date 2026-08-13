@@ -13,20 +13,153 @@
         </button>
     </div>
 
+    <!-- Global Agent Presets Bar -->
+    <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+                <h3 class="text-base font-bold text-slate-100 flex items-center space-x-2">
+                    <span>⚡ Global Agent Presets</span>
+                </h3>
+                <p class="text-xs text-slate-400">Quick-add standard global skill paths for popular AI agents.</p>
+            </div>
+            <button type="button"
+                    hx-post="/targets/seed-presets"
+                    hx-target="body"
+                    class="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all cursor-pointer">
+                ⚡ Load All Standard Presets
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <!-- Universal -->
+            <form hx-post="/targets" hx-target="body" class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-2">
+                <input type="hidden" name="name" value="Universal Agents">
+                <input type="hidden" name="path" value="~/.agents/skills">
+                <input type="hidden" name="agent_type" value="universal">
+                <input type="hidden" name="sync_mode" value="symlink">
+                <input type="hidden" name="description" value="Open Agent Skills standard global path for all agents">
+                <div>
+                    <div class="font-semibold text-indigo-400 flex items-center justify-between">
+                        <span>🌐 Universal</span>
+                        <span class="text-[10px] bg-indigo-500/10 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/20">Standard</span>
+                    </div>
+                    <p class="text-slate-400 font-mono text-[11px] truncate mt-1">~/.agents/skills</p>
+                </div>
+                <button type="submit" class="w-full py-1 px-2 text-[11px] font-medium text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg transition-all text-center">
+                    + Add Preset
+                </button>
+            </form>
+
+            <!-- Claude Code -->
+            <form hx-post="/targets" hx-target="body" class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 hover:border-amber-500/40 transition-all flex flex-col justify-between space-y-2">
+                <input type="hidden" name="name" value="Claude Code">
+                <input type="hidden" name="path" value="~/.claude/skills">
+                <input type="hidden" name="agent_type" value="claude">
+                <input type="hidden" name="sync_mode" value="symlink">
+                <input type="hidden" name="description" value="Global skill folder for Anthropic Claude CLI">
+                <div>
+                    <div class="font-semibold text-amber-400 flex items-center justify-between">
+                        <span>🤖 Claude Code</span>
+                        <span class="text-[10px] bg-amber-500/10 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/20">Claude</span>
+                    </div>
+                    <p class="text-slate-400 font-mono text-[11px] truncate mt-1">~/.claude/skills</p>
+                </div>
+                <button type="submit" class="w-full py-1 px-2 text-[11px] font-medium text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-lg transition-all text-center">
+                    + Add Preset
+                </button>
+            </form>
+
+            <!-- Antigravity -->
+            <form hx-post="/targets" hx-target="body" class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 hover:border-emerald-500/40 transition-all flex flex-col justify-between space-y-2">
+                <input type="hidden" name="name" value="Antigravity CLI">
+                <input type="hidden" name="path" value="~/.gemini/antigravity-cli/skills">
+                <input type="hidden" name="agent_type" value="antigravity">
+                <input type="hidden" name="sync_mode" value="symlink">
+                <input type="hidden" name="description" value="Global skill folder for Google Antigravity CLI">
+                <div>
+                    <div class="font-semibold text-emerald-400 flex items-center justify-between">
+                        <span>⚡ Antigravity</span>
+                        <span class="text-[10px] bg-emerald-500/10 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/20">Google</span>
+                    </div>
+                    <p class="text-slate-400 font-mono text-[11px] truncate mt-1">~/.gemini/.../skills</p>
+                </div>
+                <button type="submit" class="w-full py-1 px-2 text-[11px] font-medium text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-all text-center">
+                    + Add Preset
+                </button>
+            </form>
+
+            <!-- OpenCode -->
+            <form hx-post="/targets" hx-target="body" class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col justify-between space-y-2">
+                <input type="hidden" name="name" value="OpenCode Global">
+                <input type="hidden" name="path" value="~/.opencode/skills">
+                <input type="hidden" name="agent_type" value="opencode">
+                <input type="hidden" name="sync_mode" value="symlink">
+                <input type="hidden" name="description" value="Global skill folder for OpenCode agent">
+                <div>
+                    <div class="font-semibold text-cyan-400 flex items-center justify-between">
+                        <span>💻 OpenCode</span>
+                        <span class="text-[10px] bg-cyan-500/10 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-500/20">OpenCode</span>
+                    </div>
+                    <p class="text-slate-400 font-mono text-[11px] truncate mt-1">~/.opencode/skills</p>
+                </div>
+                <button type="submit" class="w-full py-1 px-2 text-[11px] font-medium text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-lg transition-all text-center">
+                    + Add Preset
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Agent Targets Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {{range .Targets}}
         <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-md flex flex-col justify-between space-y-4">
-            <div class="space-y-2">
+            <div class="space-y-3">
                 <div class="flex items-center justify-between">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        ● Active
+                    <!-- Agent Type Visual Badge -->
+                    {{if eq .AgentType "universal"}}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        🌐 Universal Agent
                     </span>
+                    {{else if eq .AgentType "claude"}}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        🤖 Claude Code
+                    </span>
+                    {{else if eq .AgentType "antigravity"}}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        ⚡ Antigravity
+                    </span>
+                    {{else if eq .AgentType "opencode"}}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                        💻 OpenCode
+                    </span>
+                    {{else}}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                        ⚙️ Custom Target
+                    </span>
+                    {{end}}
+
                     <span class="text-xs text-slate-400 font-mono uppercase">{{.SyncMode}}</span>
                 </div>
-                <h3 class="text-lg font-bold text-slate-100">{{.Name}}</h3>
-                <p class="text-xs text-slate-400 font-mono bg-slate-950/80 border border-slate-800 p-2.5 rounded-lg break-all">{{.Path}}</p>
+
+                <div>
+                    <h3 class="text-lg font-bold text-slate-100">{{.Name}}</h3>
+                    {{if .Description}}
+                    <p class="text-xs text-slate-400 mt-0.5">{{.Description}}</p>
+                    {{end}}
+                </div>
+
+                <!-- Path Display (Raw & Expanded) -->
+                <div class="bg-slate-950/80 border border-slate-800 p-2.5 rounded-lg space-y-1 font-mono text-xs break-all">
+                    <div class="text-slate-300">{{.Path}}</div>
+                    {{if and .ExpandedPath (ne .ExpandedPath .Path)}}
+                    <div class="text-[11px] text-slate-500 flex items-center space-x-1">
+                        <span>📍</span>
+                        <span class="truncate">{{.ExpandedPath}}</span>
+                    </div>
+                    {{end}}
+                </div>
             </div>
+
             <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
                 <span class="text-slate-400">Sync Engine: <strong class="text-purple-300">Hybrid</strong></span>
                 <button type="button"
@@ -41,7 +174,7 @@
         <div class="col-span-full bg-slate-900/60 border border-slate-800 rounded-2xl p-12 text-center text-slate-500 space-y-3">
             <div class="text-4xl opacity-60">🎯</div>
             <h4 class="text-base font-semibold text-slate-300">No Target Directories Configured</h4>
-            <p class="text-xs max-w-sm mx-auto">Add a target path like <code>~/.gemini/antigravity-cli/skills</code> or <code>.agent/skills</code> to start syncing skills.</p>
+            <p class="text-xs max-w-sm mx-auto">Click <strong>⚡ Load All Standard Presets</strong> above or add a custom path like <code>~/.agents/skills</code> to start syncing skills.</p>
         </div>
         {{end}}
     </div>

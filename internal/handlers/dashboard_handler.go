@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"skillcraft/internal/models"
-	"skillcraft/internal/repository"
-	"skillcraft/internal/services"
+	"skillbase/internal/models"
+	"skillbase/internal/repository"
+	"skillbase/internal/services"
 )
 
 // TemplateRenderer implements echo.Renderer interface for rendering HTML templates.
@@ -69,7 +69,7 @@ func (t *TemplateRenderer) Render(w io.Writer, name string, data interface{}, c 
 // DashboardData holds view model state for dashboard pages and HTMX partial swaps.
 type DashboardData struct {
 	Skills       []models.Skill
-	Targets      []models.AgentTarget
+	Targets      []TargetView
 	TotalSkills  int
 	SearchQuery  string
 	ErrorMessage string
@@ -77,7 +77,7 @@ type DashboardData struct {
 	ActivePage   string
 }
 
-// DashboardHandler handles Web UI HTTP requests for SkillCraft.
+// DashboardHandler handles Web UI HTTP requests for SkillBase.
 type DashboardHandler struct {
 	skillRepo     *repository.SkillRepository
 	targetRepo    *repository.TargetRepository
@@ -116,7 +116,7 @@ func (h *DashboardHandler) RenderOverview(c echo.Context) error {
 
 	data := DashboardData{
 		Skills:      skills,
-		Targets:     targets,
+		Targets:     h.prepareTargetViews(targets),
 		TotalSkills: len(skills),
 		ActivePage:  "overview",
 	}
@@ -141,7 +141,7 @@ func (h *DashboardHandler) RenderSkillsLibrary(c echo.Context) error {
 
 	data := DashboardData{
 		Skills:      skills,
-		Targets:     targets,
+		Targets:     h.prepareTargetViews(targets),
 		TotalSkills: len(skills),
 		ActivePage:  "skills",
 	}
@@ -158,7 +158,7 @@ func (h *DashboardHandler) RenderTargets(c echo.Context) error {
 
 	data := DashboardData{
 		Skills:      skills,
-		Targets:     targets,
+		Targets:     h.prepareTargetViews(targets),
 		TotalSkills: len(skills),
 		ActivePage:  "targets",
 	}
@@ -169,17 +169,24 @@ func (h *DashboardHandler) RenderTargets(c echo.Context) error {
 func (h *DashboardHandler) CreateTarget(c echo.Context) error {
 	name := strings.TrimSpace(c.FormValue("name"))
 	path := strings.TrimSpace(c.FormValue("path"))
+	agentType := strings.TrimSpace(c.FormValue("agent_type"))
+	if agentType == "" {
+		agentType = "custom"
+	}
 	syncMode := strings.TrimSpace(c.FormValue("sync_mode"))
 	if syncMode == "" {
 		syncMode = "symlink"
 	}
+	description := strings.TrimSpace(c.FormValue("description"))
 
 	if name != "" && path != "" {
 		target := &models.AgentTarget{
-			Name:     name,
-			Path:     path,
-			SyncMode: syncMode,
-			IsActive: true,
+			Name:        name,
+			Path:        path,
+			AgentType:   agentType,
+			SyncMode:    syncMode,
+			IsActive:    true,
+			Description: description,
 		}
 		_ = h.targetRepo.Create(target)
 
@@ -236,9 +243,6 @@ func (h *DashboardHandler) ingestSkillsFromTarget(targetPath string) {
 	}
 }
 
-
-
-
 // SearchSkills handles GET /skills/search returning filtered skill grid partial.
 func (h *DashboardHandler) SearchSkills(c echo.Context) error {
 	q := strings.TrimSpace(c.QueryParam("q"))
@@ -251,7 +255,7 @@ func (h *DashboardHandler) SearchSkills(c echo.Context) error {
 
 	data := DashboardData{
 		Skills:      skills,
-		Targets:     targets,
+		Targets:     h.prepareTargetViews(targets),
 		TotalSkills: len(skills),
 		SearchQuery: q,
 	}
@@ -266,7 +270,7 @@ func (h *DashboardHandler) ImportSkill(c echo.Context) error {
 		targets, _ := h.targetRepo.GetAll()
 		return c.Render(http.StatusBadRequest, "skill_list.html", DashboardData{
 			Skills:       skills,
-			Targets:      targets,
+			Targets:      h.prepareTargetViews(targets),
 			TotalSkills:  len(skills),
 			ErrorMessage: "GitHub URL must not be empty.",
 		})
@@ -278,7 +282,7 @@ func (h *DashboardHandler) ImportSkill(c echo.Context) error {
 		targets, _ := h.targetRepo.GetAll()
 		return c.Render(http.StatusBadRequest, "skill_list.html", DashboardData{
 			Skills:       skills,
-			Targets:      targets,
+			Targets:      h.prepareTargetViews(targets),
 			TotalSkills:  len(skills),
 			ErrorMessage: "Failed to import skill: " + err.Error(),
 		})
@@ -293,7 +297,7 @@ func (h *DashboardHandler) ImportSkill(c echo.Context) error {
 			targets, _ := h.targetRepo.GetAll()
 			return c.Render(http.StatusInternalServerError, "skill_list.html", DashboardData{
 				Skills:       skills,
-				Targets:      targets,
+				Targets:      h.prepareTargetViews(targets),
 				TotalSkills:  len(skills),
 				ErrorMessage: "Failed to update existing skill: " + err.Error(),
 			})
@@ -304,7 +308,7 @@ func (h *DashboardHandler) ImportSkill(c echo.Context) error {
 			targets, _ := h.targetRepo.GetAll()
 			return c.Render(http.StatusInternalServerError, "skill_list.html", DashboardData{
 				Skills:       skills,
-				Targets:      targets,
+				Targets:      h.prepareTargetViews(targets),
 				TotalSkills:  len(skills),
 				ErrorMessage: "Failed to save imported skill: " + err.Error(),
 			})
@@ -319,7 +323,7 @@ func (h *DashboardHandler) ImportSkill(c echo.Context) error {
 	targets, _ := h.targetRepo.GetAll()
 	return c.Render(http.StatusOK, "skill_list.html", DashboardData{
 		Skills:      skills,
-		Targets:     targets,
+		Targets:     h.prepareTargetViews(targets),
 		TotalSkills: len(skills),
 		SuccessMsg:  "Successfully imported skill: " + fetchedSkill.Name,
 	})
@@ -339,7 +343,7 @@ func (h *DashboardHandler) CreateSkill(c echo.Context) error {
 		targets, _ := h.targetRepo.GetAll()
 		return c.Render(http.StatusBadRequest, "skill_list.html", DashboardData{
 			Skills:       skills,
-			Targets:      targets,
+			Targets:      h.prepareTargetViews(targets),
 			TotalSkills:  len(skills),
 			ErrorMessage: "Skill name and content are required.",
 		})
@@ -366,7 +370,7 @@ func (h *DashboardHandler) CreateSkill(c echo.Context) error {
 			targets, _ := h.targetRepo.GetAll()
 			return c.Render(http.StatusInternalServerError, "skill_list.html", DashboardData{
 				Skills:       skills,
-				Targets:      targets,
+				Targets:      h.prepareTargetViews(targets),
 				TotalSkills:  len(skills),
 				ErrorMessage: "Failed to update skill: " + err.Error(),
 			})
@@ -377,7 +381,7 @@ func (h *DashboardHandler) CreateSkill(c echo.Context) error {
 			targets, _ := h.targetRepo.GetAll()
 			return c.Render(http.StatusInternalServerError, "skill_list.html", DashboardData{
 				Skills:       skills,
-				Targets:      targets,
+				Targets:      h.prepareTargetViews(targets),
 				TotalSkills:  len(skills),
 				ErrorMessage: "Failed to create skill: " + err.Error(),
 			})
@@ -392,7 +396,7 @@ func (h *DashboardHandler) CreateSkill(c echo.Context) error {
 	targets, _ := h.targetRepo.GetAll()
 	return c.Render(http.StatusOK, "skill_list.html", DashboardData{
 		Skills:      skills,
-		Targets:     targets,
+		Targets:     h.prepareTargetViews(targets),
 		TotalSkills: len(skills),
 		SuccessMsg:  "Skill saved successfully!",
 	})
@@ -407,7 +411,7 @@ func (h *DashboardHandler) DeleteSkill(c echo.Context) error {
 		targets, _ := h.targetRepo.GetAll()
 		return c.Render(http.StatusBadRequest, "skill_list.html", DashboardData{
 			Skills:       skills,
-			Targets:      targets,
+			Targets:      h.prepareTargetViews(targets),
 			TotalSkills:  len(skills),
 			ErrorMessage: "Invalid skill ID format.",
 		})
@@ -425,7 +429,7 @@ func (h *DashboardHandler) DeleteSkill(c echo.Context) error {
 	targets, _ := h.targetRepo.GetAll()
 	return c.Render(http.StatusOK, "skill_list.html", DashboardData{
 		Skills:      skills,
-		Targets:     targets,
+		Targets:     h.prepareTargetViews(targets),
 		TotalSkills: len(skills),
 		SuccessMsg:  "Skill deleted successfully.",
 	})

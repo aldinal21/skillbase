@@ -221,6 +221,19 @@
             </div>
 
             <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Agent Type</label>
+                <select name="agent_type"
+                        x-model="targetAgentType"
+                        class="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-800 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
+                    <option value="custom">⚙️ Custom / Generic Agent</option>
+                    <option value="universal">🌐 Universal (~/.agents/skills)</option>
+                    <option value="claude">🤖 Claude Code (~/.claude/skills)</option>
+                    <option value="antigravity">⚡ Antigravity CLI (~/.gemini/...)</option>
+                    <option value="opencode">💻 OpenCode (~/.opencode/skills)</option>
+                </select>
+            </div>
+
+            <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Sync Mode</label>
                 <select name="sync_mode"
                         x-model="targetSyncMode"

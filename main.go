@@ -8,16 +8,16 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"skillcraft/internal/database"
-	"skillcraft/internal/handlers"
-	"skillcraft/internal/repository"
-	"skillcraft/internal/services"
+	"skillbase/internal/database"
+	"skillbase/internal/handlers"
+	"skillbase/internal/repository"
+	"skillbase/internal/services"
 )
 
 func main() {
-	dbPath := os.Getenv("SKILLCRAFT_DB")
+	dbPath := os.Getenv("SKILLBASE_DB")
 	if dbPath == "" {
-		dbPath = "skillcraft.db"
+		dbPath = "skillbase.db"
 	}
 
 	db, err := database.InitDB(dbPath)
@@ -29,6 +29,11 @@ func main() {
 	// Initialize repositories
 	skillRepo := repository.NewSkillRepository(db)
 	targetRepo := repository.NewTargetRepository(db)
+
+	// Seed default global agent target presets on startup
+	if err := targetRepo.SeedDefaultPresets(); err != nil {
+		log.Printf("Warning: failed to seed default target presets: %v", err)
+	}
 
 	// Initialize services
 	vaultService := services.NewVaultService("storage/skills")
@@ -64,6 +69,7 @@ func main() {
 	e.GET("/skills/search", dashboardHandler.SearchSkills)
 	e.GET("/targets", dashboardHandler.RenderTargets)
 	e.POST("/targets", dashboardHandler.CreateTarget)
+	e.POST("/targets/seed-presets", dashboardHandler.SeedPresets)
 	e.POST("/targets/:id/scan", dashboardHandler.ScanTarget)
 	e.POST("/skills", dashboardHandler.CreateSkill)
 	e.POST("/skills/import", dashboardHandler.ImportSkill)
@@ -78,7 +84,7 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Starting SkillCraft Web Server on http://localhost:%s", port)
+	log.Printf("Starting SkillBase Web Server on http://localhost:%s", port)
 	if err := e.Start(":" + port); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server execution failed: %v", err)
 	}

@@ -148,12 +148,30 @@
 
         <div class="divide-y divide-slate-800/80">
             {{range .Targets}}
-            <div class="py-3 flex items-center justify-between">
-                <div>
-                    <h4 class="text-sm font-semibold text-slate-200">{{.Name}}</h4>
-                    <p class="text-xs text-slate-400 font-mono">{{.Path}}</p>
+            <div class="py-3 flex items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <div class="flex items-center space-x-2">
+                        <h4 class="text-sm font-semibold text-slate-200">{{.Name}}</h4>
+                        {{if eq .AgentType "universal"}}
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">🌐 Universal</span>
+                        {{else if eq .AgentType "claude"}}
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">🤖 Claude</span>
+                        {{else if eq .AgentType "antigravity"}}
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">⚡ Antigravity</span>
+                        {{else if eq .AgentType "opencode"}}
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">💻 OpenCode</span>
+                        {{else}}
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20">⚙️ Custom</span>
+                        {{end}}
+                    </div>
+                    <p class="text-xs text-slate-400 font-mono break-all">
+                        {{.Path}}
+                        {{if and .ExpandedPath (ne .ExpandedPath .Path)}}
+                        <span class="text-slate-500"> (📍 {{.ExpandedPath}})</span>
+                        {{end}}
+                    </p>
                 </div>
-                <span class="text-xs font-semibold text-emerald-400 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <span class="text-xs font-semibold text-emerald-400 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 shrink-0 uppercase font-mono">
                     {{.SyncMode}}
                 </span>
             </div>
