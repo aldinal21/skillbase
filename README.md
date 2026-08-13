@@ -2,7 +2,7 @@
 
 > **All-in-One AI Agent Skill Manager** — Centralize, create, import, and sync skills across multiple AI coding agents (Antigravity CLI, Claude CLI, Cursor, local `.agent/skills`, and custom workspaces).
 
-![SkillCraft Banner](https://img.shields.io/badge/SkillCraft-v1.0.0-indigo?style=for-the-badge&logo=go)
+![SkillCraft Banner](https://img.shields.io/badge/SkillCraft-v0.1.0--alpha-indigo?style=for-the-badge&logo=go)
 ![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go)
 ![Stack](https://img.shields.io/badge/Stack-Echo%20%7C%20SQLite%20%7C%20HTMX%20%7C%20Alpine.js-purple?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)
