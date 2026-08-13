@@ -35,7 +35,8 @@
           desktopSidebarCollapsed: false,
           activeFilter: 'all',
           createModalOpen: false, 
-          importModalOpen: false, 
+          importModalOpen: false,
+          targetModalOpen: false, 
           editMode: false,
           skillId: 0,
           skillName: '',
@@ -43,11 +44,15 @@
           skillDescription: '',
           skillTags: '',
           skillContent: '',
-          importUrl: ''
+          importUrl: '',
+          targetName: '',
+          targetPath: '',
+          targetSyncMode: 'symlink'
       }"
       @open-create-modal.window="createModalOpen = true; editMode = false; skillId = 0; skillName = ''; skillSlug = ''; skillDescription = ''; skillTags = ''; skillContent = '';"
       @open-edit-modal.window="createModalOpen = true; editMode = true; skillId = $event.detail.id; skillName = $event.detail.name; skillSlug = $event.detail.slug; skillDescription = $event.detail.description; skillTags = $event.detail.tags; skillContent = $event.detail.content;"
-      @open-import-modal.window="importModalOpen = true; importUrl = '';">
+      @open-import-modal.window="importModalOpen = true; importUrl = '';"
+      @open-target-modal.window="targetModalOpen = true; targetName = ''; targetPath = ''; targetSyncMode = 'symlink';">
 
     <!-- Responsive Sidebar Partial -->
     {{template "sidebar.html" .}}

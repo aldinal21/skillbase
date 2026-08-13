@@ -165,6 +165,29 @@ func (h *DashboardHandler) RenderTargets(c echo.Context) error {
 	return c.Render(http.StatusOK, "targets.html", data)
 }
 
+// CreateTarget handles POST /targets creating a new Agent Target directory configuration.
+func (h *DashboardHandler) CreateTarget(c echo.Context) error {
+	name := strings.TrimSpace(c.FormValue("name"))
+	path := strings.TrimSpace(c.FormValue("path"))
+	syncMode := strings.TrimSpace(c.FormValue("sync_mode"))
+	if syncMode == "" {
+		syncMode = "symlink"
+	}
+
+	if name != "" && path != "" {
+		target := &models.AgentTarget{
+			Name:     name,
+			Path:     path,
+			SyncMode: syncMode,
+			IsActive: true,
+		}
+		_ = h.targetRepo.Create(target)
+	}
+
+	return h.RenderTargets(c)
+}
+
+
 
 // SearchSkills handles GET /skills/search returning filtered skill grid partial.
 func (h *DashboardHandler) SearchSkills(c echo.Context) error {
