@@ -62,8 +62,10 @@ func main() {
 	e.GET("/", dashboardHandler.RenderOverview)
 	e.GET("/skills", dashboardHandler.RenderSkillsLibrary)
 	e.GET("/skills/search", dashboardHandler.SearchSkills)
+	e.GET("/targets", dashboardHandler.RenderTargets)
 	e.POST("/skills", dashboardHandler.CreateSkill)
 	e.POST("/skills/import", dashboardHandler.ImportSkill)
+	e.POST("/skills/:id/deploy", dashboardHandler.DeploySkill)
 	e.DELETE("/skills/:id", dashboardHandler.DeleteSkill)
 
 	// Static files route if web/static directory exists

@@ -35,6 +35,7 @@ func NewTemplateRendererFromDir(rootDir string) (*TemplateRenderer, error) {
 		filepath.Join(rootDir, "templates", "layouts", "base.html"),
 		filepath.Join(rootDir, "templates", "pages", "overview.html"),
 		filepath.Join(rootDir, "templates", "pages", "skills.html"),
+		filepath.Join(rootDir, "templates", "pages", "targets.html"),
 		filepath.Join(rootDir, "templates", "partials", "sidebar.html"),
 		filepath.Join(rootDir, "templates", "partials", "skill_list.html"),
 		filepath.Join(rootDir, "templates", "partials", "create_modal.html"),
@@ -55,6 +56,7 @@ type DashboardData struct {
 	SearchQuery  string
 	ErrorMessage string
 	SuccessMsg   string
+	ActivePage   string
 }
 
 // DashboardHandler handles Web UI HTTP requests for SkillCraft.
@@ -98,6 +100,7 @@ func (h *DashboardHandler) RenderOverview(c echo.Context) error {
 		Skills:      skills,
 		Targets:     targets,
 		TotalSkills: len(skills),
+		ActivePage:  "overview",
 	}
 	return c.Render(http.StatusOK, "overview.html", data)
 }
@@ -122,9 +125,28 @@ func (h *DashboardHandler) RenderSkillsLibrary(c echo.Context) error {
 		Skills:      skills,
 		Targets:     targets,
 		TotalSkills: len(skills),
+		ActivePage:  "skills",
 	}
 	return c.Render(http.StatusOK, "skills.html", data)
 }
+
+// RenderTargets handles GET /targets rendering the Agent Targets page.
+func (h *DashboardHandler) RenderTargets(c echo.Context) error {
+	targets, err := h.targetRepo.GetAll()
+	if err != nil {
+		targets = []models.AgentTarget{}
+	}
+	skills, _ := h.skillRepo.GetAll("")
+
+	data := DashboardData{
+		Skills:      skills,
+		Targets:     targets,
+		TotalSkills: len(skills),
+		ActivePage:  "targets",
+	}
+	return c.Render(http.StatusOK, "targets.html", data)
+}
+
 
 // SearchSkills handles GET /skills/search returning filtered skill grid partial.
 func (h *DashboardHandler) SearchSkills(c echo.Context) error {
