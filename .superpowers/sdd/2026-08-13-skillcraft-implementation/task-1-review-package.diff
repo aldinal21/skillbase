@@ -1,0 +1,305 @@
+diff --git a/.superpowers/sdd/2026-08-13-skillcraft-implementation/progress.md b/.superpowers/sdd/2026-08-13-skillcraft-implementation/progress.md
+new file mode 100644
+index 0000000..e1d600b
+--- /dev/null
++++ b/.superpowers/sdd/2026-08-13-skillcraft-implementation/progress.md
+@@ -0,0 +1 @@
++# SDD ledger — plan: docs/superpowers/plans/2026-08-13-skillcraft-implementation.md
+diff --git a/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-1-brief.md b/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-1-brief.md
+new file mode 100644
+index 0000000..6d26c8d
+--- /dev/null
++++ b/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-1-brief.md
+@@ -0,0 +1,15 @@
++# Task 1: Project Initialization & Data Models
++
++**Plan File:** `docs/superpowers/specs/2026-08-13-skillcraft-design.md`
++
++## Requirements & Scope
++- Create `go.mod` using `go mod init skillcraft`.
++- Add dependencies: `github.com/labstack/echo/v4`, `modernc.org/sqlite`.
++- Create data models in `internal/models/skill.go`:
++  - `Skill` struct with fields `ID`, `Name`, `Slug`, `Description`, `Content`, `Tags`, `SourceType`, `SourceURL`, `CreatedAt`, `UpdatedAt`.
++  - `GenerateSlug()` method on `Skill`.
++  - `AgentTarget` struct with `ID`, `Name`, `Path`, `SyncMode`, `IsActive`.
++  - `Deployment` struct with `ID`, `SkillID`, `TargetID`, `DeployedType`, `DeployedAt`.
++- Create unit test `internal/models/skill_test.go` verifying `GenerateSlug()` works correctly.
++- Ensure all tests pass with `go test ./internal/models/...`.
++- Commit changes.
+diff --git a/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-1-report.md b/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-1-report.md
+new file mode 100644
+index 0000000..3a902a0
+--- /dev/null
++++ b/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-1-report.md
+@@ -0,0 +1,45 @@
++# Task 1 Implementation Report: Project Initialization & Data Models
++
++**Date:** 2026-08-13
++**Status:** SUCCESS / DONE
++
++## Summary of Accomplishments
++1. **Go Module Initialization:**
++   - Initialized module `skillcraft` using `go mod init skillcraft`.
++   - Installed core dependencies: `github.com/labstack/echo/v4` and `modernc.org/sqlite`.
++
++2. **Core Data Models (`internal/models/skill.go`):**
++   - Created `Skill` struct with fields `ID`, `Name`, `Slug`, `Description`, `Content`, `Tags`, `SourceType`, `SourceURL`, `CreatedAt`, `UpdatedAt`.
++   - Added `GenerateSlug()` method on `Skill` struct to generate clean, URL/folder-friendly slugs.
++   - Created `AgentTarget` struct with fields `ID`, `Name`, `Path`, `SyncMode`, `IsActive`.
++   - Created `Deployment` struct with fields `ID`, `SkillID`, `TargetID`, `DeployedType`, `DeployedAt`.
++
++3. **Unit Testing (`internal/models/skill_test.go`):**
++   - Created comprehensive unit tests for `GenerateSlug()` covering standard titles, special characters, multiple spaces, hyphens, and empty strings.
++   - Added field initialization verification tests for `Skill`, `AgentTarget`, and `Deployment` structs.
++
++## Test Command Output
++```
++=== RUN   TestGenerateSlug
++=== RUN   TestGenerateSlug/Standard_title
++=== RUN   TestGenerateSlug/Title_with_punctuation_and_special_chars
++=== RUN   TestGenerateSlug/Multiple_spaces_and_dashes
++=== RUN   TestGenerateSlug/Empty_string
++=== RUN   TestGenerateSlug/Already_sluggified
++--- PASS: TestGenerateSlug (0.00s)
++    --- PASS: TestGenerateSlug/Standard_title (0.00s)
++    --- PASS: TestGenerateSlug/Title_with_punctuation_and_special_chars (0.00s)
++    --- PASS: TestGenerateSlug/Multiple_spaces_and_dashes (0.00s)
++    --- PASS: TestGenerateSlug/Empty_string (0.00s)
++    --- PASS: TestGenerateSlug/Already_sluggified (0.00s)
++=== RUN   TestStructFields
++--- PASS: TestStructFields (0.00s)
++PASS
++ok  	skillcraft/internal/models	0.209s
++```
++
++## Files Created / Modified
++- `go.mod`
++- `go.sum`
++- `internal/models/skill.go`
++- `internal/models/skill_test.go`
+diff --git a/go.mod b/go.mod
+new file mode 100644
+index 0000000..77a3b12
+--- /dev/null
++++ b/go.mod
+@@ -0,0 +1,24 @@
++module skillcraft
++
++go 1.26.5
++
++require (
++	github.com/dustin/go-humanize v1.0.1 // indirect
++	github.com/google/uuid v1.6.0 // indirect
++	github.com/labstack/echo/v4 v4.15.4 // indirect
++	github.com/labstack/gommon v0.5.0 // indirect
++	github.com/mattn/go-colorable v0.1.15 // indirect
++	github.com/mattn/go-isatty v0.0.24 // indirect
++	github.com/ncruces/go-strftime v1.0.0 // indirect
++	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
++	github.com/valyala/bytebufferpool v1.0.0 // indirect
++	github.com/valyala/fasttemplate v1.2.2 // indirect
++	golang.org/x/crypto v0.53.0 // indirect
++	golang.org/x/net v0.56.0 // indirect
++	golang.org/x/sys v0.47.0 // indirect
++	golang.org/x/text v0.38.0 // indirect
++	modernc.org/libc v1.74.4 // indirect
++	modernc.org/mathutil v1.7.1 // indirect
++	modernc.org/memory v1.11.0 // indirect
++	modernc.org/sqlite v1.56.0 // indirect
++)
+diff --git a/go.sum b/go.sum
+new file mode 100644
+index 0000000..8e0d57c
+--- /dev/null
++++ b/go.sum
+@@ -0,0 +1,36 @@
++github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
++github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
++github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
++github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
++github.com/labstack/echo/v4 v4.15.4 h1:DL45vVYa+BWE+XuW+zZNd9H0YEdZ80UAWJGcTVW4EVs=
++github.com/labstack/echo/v4 v4.15.4/go.mod h1:CuMetKIRwsuO/qlAgMq+KTAalwGoB/h4tC+yPdrTj1g=
++github.com/labstack/gommon v0.5.0 h1:6VSQ2NOzsnEJ5W6+84E0RbcaDDmgB6NIAzWCczTEe6c=
++github.com/labstack/gommon v0.5.0/go.mod h1:Rzlg7HHy1maLfzBYGg9NZcVuz1sA68HHhLjhcEllYE0=
++github.com/mattn/go-colorable v0.1.15 h1:+u9SLTRGnXv73cEsnsmoZBom+dMU88B2M0aDcWy0/jY=
++github.com/mattn/go-colorable v0.1.15/go.mod h1:6LmQG8QLFO4G5z1gPvYEzlUgJ2wF+stgPZH1UqBm1s8=
++github.com/mattn/go-isatty v0.0.24 h1:tGZZoVgT/KiqK1c8ocVLeDS8BSWMRd47J3Lbz7vsReI=
++github.com/mattn/go-isatty v0.0.24/go.mod h1:nMCL3Zebbrt45jsMDgnfIwz6ydEQApk5oEI3HqDio6A=
++github.com/ncruces/go-strftime v1.0.0 h1:HMFp8mLCTPp341M/ZnA4qaf7ZlsbTc+miZjCLOFAw7w=
++github.com/ncruces/go-strftime v1.0.0/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
++github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94icq4NjY3clb7Lk8O1qJ8BdBEF8z0ibU0rE=
++github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
++github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
++github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
++github.com/valyala/fasttemplate v1.2.2 h1:lxLXG0uE3Qnshl9QyaK6XJxMXlQZELvChBOCmQD0Loo=
++github.com/valyala/fasttemplate v1.2.2/go.mod h1:KHLXt3tVN2HBp8eijSv/kGJopbvo7S+qRAEEKiv+SiQ=
++golang.org/x/crypto v0.53.0 h1:QZ4Muo8THX6CizN2vPPd5fBGHyogrdK9fG4wLPFUsto=
++golang.org/x/crypto v0.53.0/go.mod h1:DNLU434OwVakk9PzuwV8w62mAJpRJL3vsgcfp4Qnsio=
++golang.org/x/net v0.56.0 h1:Rw8j/hFzGvJUZwNBXnAtf5sVDVt+65SK2C7IxCxZt5o=
++golang.org/x/net v0.56.0/go.mod h1:D3Ku6r+V6JROoZK144D2XfMHFcMq/0zSfLelVTCFKec=
++golang.org/x/sys v0.47.0 h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
++golang.org/x/sys v0.47.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
++golang.org/x/text v0.38.0 h1:sXmwo9DwP3OK9EZ7PqAdaooSGozfl/3a6/xJcbzPRhE=
++golang.org/x/text v0.38.0/go.mod h1:YXZt3QhHUKYT53r2lLKFIVi6Ao1jdzrTR/KQ09qyxF4=
++modernc.org/libc v1.74.4 h1:fX1Omw4o2/1C2iRkkIsrQTasJQldLhRmuPreXLoWs9k=
++modernc.org/libc v1.74.4/go.mod h1:eeQAS9W3sZeKYMFubydxJpII9ybHWshk+7or7bLG9co=
++modernc.org/mathutil v1.7.1 h1:GCZVGXdaN8gTqB1Mf/usp1Y/hSqgI2vAGGP4jZMCxOU=
++modernc.org/mathutil v1.7.1/go.mod h1:4p5IwJITfppl0G4sUEDtCr4DthTaT47/N3aT6MhfgJg=
++modernc.org/memory v1.11.0 h1:o4QC8aMQzmcwCK3t3Ux/ZHmwFPzE6hf2Y5LbkRs+hbI=
++modernc.org/memory v1.11.0/go.mod h1:/JP4VbVC+K5sU2wZi9bHoq2MAkCnrt2r98UGeSK7Mjw=
++modernc.org/sqlite v1.56.0 h1:/D8e2RfFqoy/Zc6PuC76U28zFwmI/sYx1Kjm4yEn9e0=
++modernc.org/sqlite v1.56.0/go.mod h1:yCJ2cmAaIkHQ25oXWrF8H4O1lIfPYPR26yCEDj2P3pQ=
+diff --git a/internal/models/skill.go b/internal/models/skill.go
+new file mode 100644
+index 0000000..e53a009
+--- /dev/null
++++ b/internal/models/skill.go
+@@ -0,0 +1,53 @@
++package models
++
++import (
++	"regexp"
++	"strings"
++	"time"
++)
++
++// Skill represents an AI Agent Skill stored in database and master vault.
++type Skill struct {
++	ID          int64     `json:"id" db:"id"`
++	Name        string    `json:"name" db:"name"`
++	Slug        string    `json:"slug" db:"slug"`
++	Description string    `json:"description" db:"description"`
++	Content     string    `json:"content" db:"content"`
++	Tags        string    `json:"tags" db:"tags"`
++	SourceType  string    `json:"source_type" db:"source_type"`
++	SourceURL   string    `json:"source_url" db:"source_url"`
++	CreatedAt   time.Time `json:"created_at" db:"created_at"`
++	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
++}
++
++// AgentTarget represents a target destination path for skill synchronization.
++type AgentTarget struct {
++	ID       int64  `json:"id" db:"id"`
++	Name     string `json:"name" db:"name"`
++	Path     string `json:"path" db:"path"`
++	SyncMode string `json:"sync_mode" db:"sync_mode"`
++	IsActive bool   `json:"is_active" db:"is_active"`
++}
++
++// Deployment represents a record of a skill deployed to an agent target.
++type Deployment struct {
++	ID           int64     `json:"id" db:"id"`
++	SkillID      int64     `json:"skill_id" db:"skill_id"`
++	TargetID     int64     `json:"target_id" db:"target_id"`
++	DeployedType string    `json:"deployed_type" db:"deployed_type"`
++	DeployedAt   time.Time `json:"deployed_at" db:"deployed_at"`
++}
++
++var nonAlphanumericRegex = regexp.MustCompile(`[^a-z0-9]+`)
++
++// GenerateSlug derives a URL/folder-friendly slug from the Skill's Name,
++// sets the s.Slug field, and returns the generated slug string.
++func (s *Skill) GenerateSlug() string {
++	str := strings.ToLower(strings.TrimSpace(s.Name))
++	// Replace non-alphanumeric sequences with a hyphen
++	slug := nonAlphanumericRegex.ReplaceAllString(str, "-")
++	// Trim hyphens from start and end
++	slug = strings.Trim(slug, "-")
++	s.Slug = slug
++	return slug
++}
+diff --git a/internal/models/skill_test.go b/internal/models/skill_test.go
+new file mode 100644
+index 0000000..dfc25dd
+--- /dev/null
++++ b/internal/models/skill_test.go
+@@ -0,0 +1,89 @@
++package models
++
++import (
++	"testing"
++)
++
++func TestGenerateSlug(t *testing.T) {
++	tests := []struct {
++		name     string
++		input    string
++		expected string
++	}{
++		{
++			name:     "Standard title",
++			input:    "My Super Skill",
++			expected: "my-super-skill",
++		},
++		{
++			name:     "Title with punctuation and special chars",
++			input:    "  Go & SQLite Skill 2.0!! ",
++			expected: "go-sqlite-skill-2-0",
++		},
++		{
++			name:     "Multiple spaces and dashes",
++			input:    "  Awesome --- Skill  Name  ",
++			expected: "awesome-skill-name",
++		},
++		{
++			name:     "Empty string",
++			input:    "",
++			expected: "",
++		},
++		{
++			name:     "Already sluggified",
++			input:    "already-sluggified-skill",
++			expected: "already-sluggified-skill",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			s := &Skill{Name: tt.input}
++			slug := s.GenerateSlug()
++			if slug != tt.expected {
++				t.Errorf("GenerateSlug() return = %q, want %q", slug, tt.expected)
++			}
++			if s.Slug != tt.expected {
++				t.Errorf("Skill.Slug field = %q, want %q", s.Slug, tt.expected)
++			}
++		})
++	}
++}
++
++func TestStructFields(t *testing.T) {
++	skill := Skill{
++		ID:          1,
++		Name:        "Test Skill",
++		Slug:        "test-skill",
++		Description: "A test description",
++		Content:     "# Test Content",
++		Tags:        "test,go",
++		SourceType:  "custom",
++		SourceURL:   "",
++	}
++	if skill.ID != 1 || skill.Name != "Test Skill" || skill.Slug != "test-skill" {
++		t.Errorf("Skill struct fields unexpected value: %+v", skill)
++	}
++
++	target := AgentTarget{
++		ID:       10,
++		Name:     "Antigravity CLI",
++		Path:     "/home/user/.gemini/antigravity-cli/skills",
++		SyncMode: "symlink",
++		IsActive: true,
++	}
++	if target.ID != 10 || !target.IsActive || target.SyncMode != "symlink" {
++		t.Errorf("AgentTarget struct fields unexpected value: %+v", target)
++	}
++
++	dep := Deployment{
++		ID:           100,
++		SkillID:      1,
++		TargetID:     10,
++		DeployedType: "symlink",
++	}
++	if dep.ID != 100 || dep.SkillID != 1 || dep.TargetID != 10 {
++		t.Errorf("Deployment struct fields unexpected value: %+v", dep)
++	}
++}

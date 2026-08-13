@@ -1,0 +1,242 @@
+diff --git a/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-2-report.md b/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-2-report.md
+new file mode 100644
+index 0000000..2293c78
+--- /dev/null
++++ b/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-2-report.md
+@@ -0,0 +1,41 @@
++# Task 2 Report: SQLite Database Connection & Migrations
++
++## Task Details
++- **Task Index**: Task 2
++- **Status**: DONE
++- **Files Created**:
++  - `internal/database/db.go`
++  - `internal/database/db_test.go`
++
++## Implementation Overview
++1. **`InitDB(dbPath string) (*sql.DB, error)`**:
++   - Opens SQLite database using pure-Go `modernc.org/sqlite` driver (`"sqlite"`).
++   - Ensures directory path exists if a file path with subdirectories is provided.
++   - Pings the database to confirm active connection.
++   - Enables foreign key constraints via `PRAGMA foreign_keys = ON;`.
++2. **Schema Migration**:
++   - `skills` table with columns: `id`, `name`, `slug`, `description`, `content`, `tags`, `source_type`, `source_url`, `created_at`, `updated_at`.
++   - `agent_targets` table with columns: `id`, `name`, `path`, `sync_mode`, `is_active`.
++   - `skill_deployments` table with columns: `id`, `skill_id`, `target_id`, `deployed_type`, `deployed_at` (with Foreign Keys to `skills` and `agent_targets`).
++3. **Unit Tests**:
++   - `TestInitDB_InMemory`: Tests memory database initialization and verifies table existence in `sqlite_master`.
++   - `TestInitDB_FileBasedAndIdempotent`: Tests creation on disk, record insertion, closing, and reopening existing database without migration errors.
++   - `TestInitDB_ForeignKeyEnforcement`: Tests that foreign key constraint violations produce errors.
++
++## Test Verification Output
++```
++=== RUN   TestInitDB_InMemory
++--- PASS: TestInitDB_InMemory (0.00s)
++=== RUN   TestInitDB_FileBasedAndIdempotent
++--- PASS: TestInitDB_FileBasedAndIdempotent (0.02s)
++=== RUN   TestInitDB_ForeignKeyEnforcement
++--- PASS: TestInitDB_ForeignKeyEnforcement (0.00s)
++PASS
++ok  	skillcraft/internal/database	2.149s
++```
++
++`go test ./...` output:
++```
++ok  	skillcraft/internal/database	0.398s
++ok  	skillcraft/internal/models	(cached)
++```
+diff --git a/internal/database/db.go b/internal/database/db.go
+new file mode 100644
+index 0000000..c73bb20
+--- /dev/null
++++ b/internal/database/db.go
+@@ -0,0 +1,83 @@
++package database
++
++import (
++	"database/sql"
++	"fmt"
++	"os"
++	"path/filepath"
++
++	_ "modernc.org/sqlite"
++)
++
++// InitDB initializes SQLite database at the specified dbPath, runs DDL schema migrations,
++// and returns an active *sql.DB connection pool.
++func InitDB(dbPath string) (*sql.DB, error) {
++	if dbPath != ":memory:" && dbPath != "" {
++		dir := filepath.Dir(dbPath)
++		if dir != "." && dir != "" {
++			if err := os.MkdirAll(dir, 0755); err != nil {
++				return nil, fmt.Errorf("failed to create directory for database: %w", err)
++			}
++		}
++	}
++
++	db, err := sql.Open("sqlite", dbPath)
++	if err != nil {
++		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
++	}
++
++	if err := db.Ping(); err != nil {
++		db.Close()
++		return nil, fmt.Errorf("failed to ping sqlite database: %w", err)
++	}
++
++	if _, err := db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
++		db.Close()
++		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
++	}
++
++	if err := migrateSchema(db); err != nil {
++		db.Close()
++		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
++	}
++
++	return db, nil
++}
++
++func migrateSchema(db *sql.DB) error {
++	schema := `
++	CREATE TABLE IF NOT EXISTS skills (
++		id INTEGER PRIMARY KEY AUTOINCREMENT,
++		name TEXT NOT NULL,
++		slug TEXT UNIQUE NOT NULL,
++		description TEXT,
++		content TEXT NOT NULL,
++		tags TEXT,
++		source_type TEXT DEFAULT 'custom',
++		source_url TEXT,
++		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
++		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
++	);
++
++	CREATE TABLE IF NOT EXISTS agent_targets (
++		id INTEGER PRIMARY KEY AUTOINCREMENT,
++		name TEXT NOT NULL,
++		path TEXT NOT NULL,
++		sync_mode TEXT DEFAULT 'symlink',
++		is_active BOOLEAN DEFAULT 1
++	);
++
++	CREATE TABLE IF NOT EXISTS skill_deployments (
++		id INTEGER PRIMARY KEY AUTOINCREMENT,
++		skill_id INTEGER NOT NULL,
++		target_id INTEGER NOT NULL,
++		deployed_type TEXT NOT NULL,
++		deployed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
++		FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
++		FOREIGN KEY (target_id) REFERENCES agent_targets(id) ON DELETE CASCADE
++	);
++	`
++
++	_, err := db.Exec(schema)
++	return err
++}
+diff --git a/internal/database/db_test.go b/internal/database/db_test.go
+new file mode 100644
+index 0000000..93b6b9c
+--- /dev/null
++++ b/internal/database/db_test.go
+@@ -0,0 +1,100 @@
++package database
++
++import (
++	"path/filepath"
++	"testing"
++)
++
++func TestInitDB_InMemory(t *testing.T) {
++	db, err := InitDB(":memory:")
++	if err != nil {
++		t.Fatalf("InitDB failed: %v", err)
++	}
++	defer db.Close()
++
++	tables := []string{"skills", "agent_targets", "skill_deployments"}
++	for _, table := range tables {
++		var name string
++		err := db.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name=?", table).Scan(&name)
++		if err != nil {
++			t.Errorf("expected table %s to exist, but query failed: %v", table, err)
++		}
++		if name != table {
++			t.Errorf("expected table name %s, got %s", table, name)
++		}
++	}
++}
++
++func TestInitDB_FileBasedAndIdempotent(t *testing.T) {
++	tmpDir := t.TempDir()
++	dbPath := filepath.Join(tmpDir, "sub_dir", "test_skillcraft.db")
++
++	// First initialization
++	db1, err := InitDB(dbPath)
++	if err != nil {
++		t.Fatalf("First InitDB failed: %v", err)
++	}
++
++	// Insert test skill
++	res, err := db1.Exec(`INSERT INTO skills (name, slug, content, tags) VALUES (?, ?, ?, ?)`,
++		"Test Skill", "test-skill", "# Test", "test,go")
++	if err != nil {
++		t.Fatalf("Failed to insert skill: %v", err)
++	}
++
++	skillID, err := res.LastInsertId()
++	if err != nil {
++		t.Fatalf("Failed to get last insert id: %v", err)
++	}
++
++	// Insert test target
++	resTarget, err := db1.Exec(`INSERT INTO agent_targets (name, path, sync_mode, is_active) VALUES (?, ?, ?, ?)`,
++		"Antigravity Target", "/tmp/target", "symlink", 1)
++	if err != nil {
++		t.Fatalf("Failed to insert agent target: %v", err)
++	}
++
++	targetID, err := resTarget.LastInsertId()
++	if err != nil {
++		t.Fatalf("Failed to get target last insert id: %v", err)
++	}
++
++	// Insert deployment
++	_, err = db1.Exec(`INSERT INTO skill_deployments (skill_id, target_id, deployed_type) VALUES (?, ?, ?)`,
++		skillID, targetID, "symlink")
++	if err != nil {
++		t.Fatalf("Failed to insert deployment: %v", err)
++	}
++
++	db1.Close()
++
++	// Second initialization on existing file (Idempotency test)
++	db2, err := InitDB(dbPath)
++	if err != nil {
++		t.Fatalf("Second InitDB failed: %v", err)
++	}
++	defer db2.Close()
++
++	var count int
++	err = db2.QueryRow("SELECT COUNT(*) FROM skills").Scan(&count)
++	if err != nil {
++		t.Fatalf("Failed to query skills count from reopened DB: %v", err)
++	}
++	if count != 1 {
++		t.Errorf("Expected 1 skill in DB, got %d", count)
++	}
++}
++
++func TestInitDB_ForeignKeyEnforcement(t *testing.T) {
++	db, err := InitDB(":memory:")
++	if err != nil {
++		t.Fatalf("InitDB failed: %v", err)
++	}
++	defer db.Close()
++
++	// Attempt inserting deployment referencing non-existent skill and target
++	_, err = db.Exec(`INSERT INTO skill_deployments (skill_id, target_id, deployed_type) VALUES (999, 999, 'symlink')`)
++	if err == nil {
++		t.Error("Expected foreign key constraint failure, but insert succeeded")
++	}
++}

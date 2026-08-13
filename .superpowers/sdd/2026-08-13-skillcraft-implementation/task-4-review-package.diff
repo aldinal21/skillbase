@@ -1,0 +1,453 @@
+diff --git a/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-4-report.md b/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-4-report.md
+new file mode 100644
+index 0000000..65528ff
+--- /dev/null
++++ b/.superpowers/sdd/2026-08-13-skillcraft-implementation/task-4-report.md
+@@ -0,0 +1,37 @@
++# Task 4 Report: Local Master Vault Service & Hybrid Sync Engine
++
++**Status**: COMPLETED
++
++## Summary of Implementation
++1. **VaultService** (`internal/services/vault_service.go`):
++   - Manages local storage vault filesystem under `storage/skills/<slug>/SKILL.md`.
++   - Implemented `NewVaultService`, `GetSkillDir`, `GetSkillPath`, `SaveSkillToVault`, and `DeleteSkillFromVault`.
++2. **SyncService** (`internal/services/sync_service.go`):
++   - Manages skill deployment to target directories.
++   - Implemented Hybrid Sync logic:
++     - Attempts `os.Symlink` first for `"symlink"` or `"auto"` modes.
++     - Automatically falls back to recursive `copyDir` if `os.Symlink` fails (e.g. on Windows without elevated privileges/developer mode) or if mode is set to `"copy"`.
++     - Automatically saves skill content to vault if missing prior to deployment.
++3. **Unit Tests** (`internal/services/sync_service_test.go`):
++   - Verified vault operations (saving, directory retrieval, path calculation, deletion).
++   - Verified sync engine in copy mode, symlink/fallback mode, auto-save to vault, and error handling.
++
++## Verification & Test Results
++Command executed: `go test -v ./internal/services/...`
++
++```text
++=== RUN   TestVaultService
++--- PASS: TestVaultService (0.01s)
++=== RUN   TestSyncService_DeploySkill_CopyMode
++--- PASS: TestSyncService_DeploySkill_CopyMode (0.01s)
++=== RUN   TestSyncService_DeploySkill_SymlinkOrFallback
++--- PASS: TestSyncService_DeploySkill_SymlinkOrFallback (0.01s)
++=== RUN   TestSyncService_DeploySkill_AutoSaveVault
++--- PASS: TestSyncService_DeploySkill_AutoSaveVault (0.01s)
++=== RUN   TestSyncService_DeploySkill_NilAndErrors
++--- PASS: TestSyncService_DeploySkill_NilAndErrors (0.00s)
++PASS
++ok  	skillcraft/internal/services	1.098s
++```
++
++All 5 test suites passed cleanly.
+diff --git a/internal/services/sync_service.go b/internal/services/sync_service.go
+new file mode 100644
+index 0000000..5898151
+--- /dev/null
++++ b/internal/services/sync_service.go
+@@ -0,0 +1,153 @@
++package services
++
++import (
++	"fmt"
++	"io"
++	"os"
++	"path/filepath"
++
++	"skillcraft/internal/models"
++)
++
++// SyncService manages the deployment and synchronization of skills to agent targets.
++type SyncService struct {
++	vaultService *VaultService
++}
++
++// NewSyncService creates a new instance of SyncService with the provided VaultService.
++func NewSyncService(vaultService *VaultService) *SyncService {
++	return &SyncService{
++		vaultService: vaultService,
++	}
++}
++
++// DeploySkill deploys a skill to an AgentTarget using Hybrid Symlink / Copy Fallback strategy.
++// Returns deployedType ("symlink" or "copy") and error if deployment fails.
++func (s *SyncService) DeploySkill(skill *models.Skill, target *models.AgentTarget) (string, error) {
++	if skill == nil || target == nil {
++		return "", fmt.Errorf("skill and target must not be nil")
++	}
++
++	if skill.Slug == "" {
++		skill.GenerateSlug()
++	}
++	if skill.Slug == "" {
++		return "", fmt.Errorf("skill slug is empty and could not be generated")
++	}
++
++	srcDir := s.vaultService.GetSkillDir(skill.Slug)
++
++	// Ensure vault has the skill folder and SKILL.md ready
++	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
++		if skill.Content != "" {
++			if err := s.vaultService.SaveSkillToVault(skill.Slug, skill.Content); err != nil {
++				return "", fmt.Errorf("failed to save skill content to vault prior to deploy: %w", err)
++			}
++		} else {
++			return "", fmt.Errorf("source skill vault directory does not exist: %s", srcDir)
++		}
++	}
++
++	destDir := filepath.Join(target.Path, skill.Slug)
++
++	// Remove existing target path if it exists to allow clean re-link or re-copy
++	if err := os.RemoveAll(destDir); err != nil && !os.IsNotExist(err) {
++		return "", fmt.Errorf("failed to remove existing target deployment path: %w", err)
++	}
++
++	// Ensure parent target directory exists
++	if err := os.MkdirAll(target.Path, 0755); err != nil {
++		return "", fmt.Errorf("failed to create target parent directory: %w", err)
++	}
++
++	absSrcDir, err := filepath.Abs(srcDir)
++	if err != nil {
++		absSrcDir = srcDir
++	}
++
++	// If explicit copy mode is requested
++	if target.SyncMode == "copy" {
++		if err := copyDir(absSrcDir, destDir); err != nil {
++			return "", fmt.Errorf("copy deployment failed: %w", err)
++		}
++		return "copy", nil
++	}
++
++	// Default, symlink, or auto mode: Try symlink first
++	symlinkErr := os.Symlink(absSrcDir, destDir)
++	if symlinkErr == nil {
++		// Verify symlink target is accessible
++		if _, statErr := os.Stat(destDir); statErr == nil {
++			return "symlink", nil
++		}
++		// If symlink target is invalid or inaccessible, cleanup and fall back to copy
++		_ = os.Remove(destDir)
++	}
++
++	// Symlink failed or produced broken link -> fallback to copy logic
++	if err := copyDir(absSrcDir, destDir); err != nil {
++		return "", fmt.Errorf("symlink failed (%v) and fallback copy also failed: %w", symlinkErr, err)
++	}
++
++	return "copy", nil
++}
++
++// copyDir recursively copies a directory tree from src to dst.
++func copyDir(src, dst string) error {
++	srcInfo, err := os.Stat(src)
++	if err != nil {
++		return err
++	}
++
++	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
++		return err
++	}
++
++	entries, err := os.ReadDir(src)
++	if err != nil {
++		return err
++	}
++
++	for _, entry := range entries {
++		srcPath := filepath.Join(src, entry.Name())
++		dstPath := filepath.Join(dst, entry.Name())
++
++		if entry.IsDir() {
++			if err := copyDir(srcPath, dstPath); err != nil {
++				return err
++			}
++		} else {
++			if err := copyFile(srcPath, dstPath); err != nil {
++				return err
++			}
++		}
++	}
++
++	return nil
++}
++
++// copyFile copies a single file from src to dst.
++func copyFile(src, dst string) error {
++	in, err := os.Open(src)
++	if err != nil {
++		return err
++	}
++	defer in.Close()
++
++	out, err := os.Create(dst)
++	if err != nil {
++		return err
++	}
++	defer out.Close()
++
++	if _, err = io.Copy(out, in); err != nil {
++		return err
++	}
++
++	info, err := os.Stat(src)
++	if err == nil {
++		_ = os.Chmod(dst, info.Mode())
++	}
++
++	return out.Close()
++}
+diff --git a/internal/services/sync_service_test.go b/internal/services/sync_service_test.go
+new file mode 100644
+index 0000000..05fa0df
+--- /dev/null
++++ b/internal/services/sync_service_test.go
+@@ -0,0 +1,191 @@
++package services
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++
++	"skillcraft/internal/models"
++)
++
++func TestVaultService(t *testing.T) {
++	tempVaultDir := t.TempDir()
++	vault := NewVaultService(tempVaultDir)
++
++	slug := "test-skill"
++	content := "# Test Skill\nThis is a test."
++
++	// Test GetSkillDir & GetSkillPath
++	expectedDir := filepath.Join(tempVaultDir, slug)
++	expectedPath := filepath.Join(expectedDir, "SKILL.md")
++	if dir := vault.GetSkillDir(slug); dir != expectedDir {
++		t.Errorf("expected skill dir %s, got %s", expectedDir, dir)
++	}
++	if path := vault.GetSkillPath(slug); path != expectedPath {
++		t.Errorf("expected skill path %s, got %s", expectedPath, path)
++	}
++
++	// Test SaveSkillToVault
++	if err := vault.SaveSkillToVault(slug, content); err != nil {
++		t.Fatalf("failed to save skill to vault: %v", err)
++	}
++
++	savedBytes, err := os.ReadFile(expectedPath)
++	if err != nil {
++		t.Fatalf("failed to read saved skill file: %v", err)
++	}
++	if string(savedBytes) != content {
++		t.Errorf("expected content %q, got %q", content, string(savedBytes))
++	}
++
++	// Test DeleteSkillFromVault
++	if err := vault.DeleteSkillFromVault(slug); err != nil {
++		t.Fatalf("failed to delete skill from vault: %v", err)
++	}
++
++	if _, err := os.Stat(expectedDir); !os.IsNotExist(err) {
++		t.Errorf("expected skill directory to be deleted, but it still exists")
++	}
++}
++
++func TestSyncService_DeploySkill_CopyMode(t *testing.T) {
++	vaultDir := t.TempDir()
++	targetDir := t.TempDir()
++
++	vault := NewVaultService(vaultDir)
++	syncer := NewSyncService(vault)
++
++	skill := &models.Skill{
++		Name:    "Copy Skill Test",
++		Slug:    "copy-skill-test",
++		Content: "# Copy Skill Content\nTesting copy deployment mode.",
++	}
++
++	if err := vault.SaveSkillToVault(skill.Slug, skill.Content); err != nil {
++		t.Fatalf("failed to prepare vault skill: %v", err)
++	}
++
++	target := &models.AgentTarget{
++		Name:     "Test Copy Target",
++		Path:     targetDir,
++		SyncMode: "copy",
++		IsActive: true,
++	}
++
++	deployedType, err := syncer.DeploySkill(skill, target)
++	if err != nil {
++		t.Fatalf("DeploySkill failed: %v", err)
++	}
++	if deployedType != "copy" {
++		t.Errorf("expected deployedType 'copy', got %q", deployedType)
++	}
++
++	deployedFilePath := filepath.Join(targetDir, skill.Slug, "SKILL.md")
++	deployedContent, err := os.ReadFile(deployedFilePath)
++	if err != nil {
++		t.Fatalf("failed to read deployed skill file: %v", err)
++	}
++	if string(deployedContent) != skill.Content {
++		t.Errorf("expected content %q, got %q", skill.Content, string(deployedContent))
++	}
++}
++
++func TestSyncService_DeploySkill_SymlinkOrFallback(t *testing.T) {
++	vaultDir := t.TempDir()
++	targetDir := t.TempDir()
++
++	vault := NewVaultService(vaultDir)
++	syncer := NewSyncService(vault)
++
++	skill := &models.Skill{
++		Name:    "Symlink Skill Test",
++		Slug:    "symlink-skill-test",
++		Content: "# Symlink Skill Content\nTesting symlink deployment.",
++	}
++
++	if err := vault.SaveSkillToVault(skill.Slug, skill.Content); err != nil {
++		t.Fatalf("failed to prepare vault skill: %v", err)
++	}
++
++	target := &models.AgentTarget{
++		Name:     "Test Symlink Target",
++		Path:     targetDir,
++		SyncMode: "symlink",
++		IsActive: true,
++	}
++
++	deployedType, err := syncer.DeploySkill(skill, target)
++	if err != nil {
++		t.Fatalf("DeploySkill failed: %v", err)
++	}
++	if deployedType != "symlink" && deployedType != "copy" {
++		t.Errorf("expected deployedType 'symlink' or 'copy', got %q", deployedType)
++	}
++
++	deployedFilePath := filepath.Join(targetDir, skill.Slug, "SKILL.md")
++	deployedContent, err := os.ReadFile(deployedFilePath)
++	if err != nil {
++		t.Fatalf("failed to read deployed skill file: %v", err)
++	}
++	if string(deployedContent) != skill.Content {
++		t.Errorf("expected content %q, got %q", skill.Content, string(deployedContent))
++	}
++}
++
++func TestSyncService_DeploySkill_AutoSaveVault(t *testing.T) {
++	vaultDir := t.TempDir()
++	targetDir := t.TempDir()
++
++	vault := NewVaultService(vaultDir)
++	syncer := NewSyncService(vault)
++
++	skill := &models.Skill{
++		Name:    "Auto Save Skill",
++		Content: "# Auto Save Content",
++	}
++
++	target := &models.AgentTarget{
++		Name:     "Target Auto Save",
++		Path:     targetDir,
++		SyncMode: "copy",
++		IsActive: true,
++	}
++
++	deployedType, err := syncer.DeploySkill(skill, target)
++	if err != nil {
++		t.Fatalf("DeploySkill failed: %v", err)
++	}
++	if deployedType != "copy" {
++		t.Errorf("expected deployedType 'copy', got %q", deployedType)
++	}
++	if skill.Slug != "auto-save-skill" {
++		t.Errorf("expected slug 'auto-save-skill', got %q", skill.Slug)
++	}
++
++	// Verify vault file was auto-created
++	vaultFilePath := vault.GetSkillPath(skill.Slug)
++	if _, err := os.Stat(vaultFilePath); os.IsNotExist(err) {
++		t.Errorf("expected vault file %s to be auto-created", vaultFilePath)
++	}
++}
++
++func TestSyncService_DeploySkill_NilAndErrors(t *testing.T) {
++	vault := NewVaultService(t.TempDir())
++	syncer := NewSyncService(vault)
++
++	skill := &models.Skill{Slug: "test"}
++	target := &models.AgentTarget{Path: t.TempDir()}
++
++	if _, err := syncer.DeploySkill(nil, target); err == nil {
++		t.Errorf("expected error for nil skill")
++	}
++	if _, err := syncer.DeploySkill(skill, nil); err == nil {
++		t.Errorf("expected error for nil target")
++	}
++
++	// Skill with empty content and missing vault folder
++	missingSkill := &models.Skill{Slug: "nonexistent"}
++	if _, err := syncer.DeploySkill(missingSkill, target); err == nil {
++		t.Errorf("expected error when vault directory does not exist and content is empty")
++	}
++}
+diff --git a/internal/services/vault_service.go b/internal/services/vault_service.go
+new file mode 100644
+index 0000000..ee8d6f5
+--- /dev/null
++++ b/internal/services/vault_service.go
+@@ -0,0 +1,48 @@
++package services
++
++import (
++	"os"
++	"path/filepath"
++)
++
++// VaultService manages the local master vault storage for skills.
++type VaultService struct {
++	baseDir string
++}
++
++// NewVaultService creates a new VaultService instance.
++// If baseDir is empty, it defaults to "storage/skills".
++func NewVaultService(baseDir string) *VaultService {
++	if baseDir == "" {
++		baseDir = "storage/skills"
++	}
++	return &VaultService{
++		baseDir: baseDir,
++	}
++}
++
++// GetSkillDir returns the directory path for a skill given its slug.
++func (v *VaultService) GetSkillDir(slug string) string {
++	return filepath.Join(v.baseDir, slug)
++}
++
++// GetSkillPath returns the file path to SKILL.md for a skill given its slug.
++func (v *VaultService) GetSkillPath(slug string) string {
++	return filepath.Join(v.GetSkillDir(slug), "SKILL.md")
++}
++
++// SaveSkillToVault saves skill markdown content to storage/skills/<slug>/SKILL.md.
++func (v *VaultService) SaveSkillToVault(slug, content string) error {
++	dirPath := v.GetSkillDir(slug)
++	if err := os.MkdirAll(dirPath, 0755); err != nil {
++		return err
++	}
++	filePath := v.GetSkillPath(slug)
++	return os.WriteFile(filePath, []byte(content), 0644)
++}
++
++// DeleteSkillFromVault removes storage/skills/<slug>/ directory and all its contents.
++func (v *VaultService) DeleteSkillFromVault(slug string) error {
++	dirPath := v.GetSkillDir(slug)
++	return os.RemoveAll(dirPath)
++}

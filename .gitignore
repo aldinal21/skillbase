@@ -1,0 +1,11 @@
+# Executables
+*.exe
+skillcraft
+
+# Database & Vault Storage
+*.db
+storage/skills/
+
+# OS specific
+Thumbs.db
+Desktop.ini
