@@ -62,6 +62,8 @@ func migrateSchema(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS agent_targets (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
+		agent_type TEXT DEFAULT 'custom',
+		description TEXT DEFAULT '',
 		path TEXT NOT NULL,
 		sync_mode TEXT DEFAULT 'symlink',
 		is_active BOOLEAN DEFAULT 1

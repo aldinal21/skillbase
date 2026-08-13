@@ -3,8 +3,8 @@ package repository_test
 import (
 	"testing"
 
-	"skillcraft/internal/models"
-	"skillcraft/internal/repository"
+	"skillbase/internal/models"
+	"skillbase/internal/repository"
 )
 
 func TestTargetRepository_CreateAndGetByID(t *testing.T) {
@@ -98,3 +98,60 @@ func TestTargetRepository_Delete(t *testing.T) {
 		t.Errorf("expected error deleting non-existent target ID, got nil")
 	}
 }
+
+func TestSeedDefaultPresets(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewTargetRepository(db)
+
+	err := repo.SeedDefaultPresets()
+	if err != nil {
+		t.Fatalf("expected no error on SeedDefaultPresets, got: %v", err)
+	}
+
+	targets, err := repo.GetAll()
+	if err != nil {
+		t.Fatalf("expected no error on GetAll, got: %v", err)
+	}
+
+	if len(targets) != 4 {
+		t.Fatalf("expected 4 seeded presets, got %d", len(targets))
+	}
+
+	expectedTypes := map[string]string{
+		"universal":   "~/.agents/skills",
+		"claude":      "~/.claude/skills",
+		"antigravity": "~/.gemini/antigravity-cli/skills",
+		"opencode":    "~/.opencode/skills",
+	}
+
+	for _, target := range targets {
+		expectedPath, exists := expectedTypes[target.AgentType]
+		if !exists {
+			t.Errorf("unexpected agent_type: %s", target.AgentType)
+		} else if target.Path != expectedPath {
+			t.Errorf("expected path %s for agent_type %s, got %s", expectedPath, target.AgentType, target.Path)
+		}
+		if !target.IsActive {
+			t.Errorf("expected target %s to be active", target.Name)
+		}
+		if target.SyncMode != "symlink" {
+			t.Errorf("expected sync_mode symlink for %s, got %s", target.Name, target.SyncMode)
+		}
+	}
+
+	// Test idempotency: calling SeedDefaultPresets again should not duplicate records
+	err = repo.SeedDefaultPresets()
+	if err != nil {
+		t.Fatalf("expected no error on second SeedDefaultPresets, got: %v", err)
+	}
+
+	targetsAgain, err := repo.GetAll()
+	if err != nil {
+		t.Fatalf("expected no error on GetAll, got: %v", err)
+	}
+
+	if len(targetsAgain) != 4 {
+		t.Fatalf("expected 4 presets after second seed, got %d", len(targetsAgain))
+	}
+}
+
