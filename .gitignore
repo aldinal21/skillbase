@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-skillcraft
+skillbase
 main
 
 # Database & SQLite files
@@ -28,3 +28,5 @@ Desktop.ini
 *.log
 scratch/
 tmp/
+.superpowers/
+
