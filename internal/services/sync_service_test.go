@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"skillcraft/internal/models"
+	"skillbase/internal/models"
 )
 
 func TestVaultService(t *testing.T) {

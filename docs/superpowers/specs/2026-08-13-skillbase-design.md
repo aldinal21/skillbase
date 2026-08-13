@@ -1,7 +1,7 @@
-# SkillCraft - Technical Design Specification
+# SkillBase - Technical Design Specification
 
 ## Overview
-**SkillCraft** adalah aplikasi All-in-One Agent Skill Manager berbasis **Go (Echo Framework)**, **SQLite**, **HTMX**, **Alpine.js**, dan **Tailwind CSS**. SkillCraft dirancang untuk mengelola, membuat, mengimpor dari GitHub, serta mendistribusikan (*sync/deploy*) *skills* untuk AI Agent (seperti Antigravity CLI, Claude Agent, `.agent/skills`, dsb.) melalui interface dashboard web yang ultra-responsif dan profesional.
+**SkillBase** adalah aplikasi All-in-One Agent Skill Manager berbasis **Go (Echo Framework)**, **SQLite**, **HTMX**, **Alpine.js**, dan **Tailwind CSS**. SkillBase dirancang untuk mengelola, membuat, mengimpor dari GitHub, serta mendistribusikan (*sync/deploy*) *skills* untuk AI Agent (seperti Antigravity CLI, Claude Agent, `.agent/skills`, dsb.) melalui interface dashboard web yang ultra-responsif dan profesional.
 
 ---
 
@@ -9,10 +9,10 @@
 
 ```
 +-------------------------------------------------------------------------------+
-|                                  SkillCraft                                   |
+|                                  SkillBase                                   |
 |                                                                               |
 |  [ Master Storage / Vault ]                                                   |
-|  ├── SQLite Database (`skillcraft.db`) -> Metadata & Registry                  |
+|  ├── SQLite Database (`SkillBase.db`) -> Metadata & Registry                  |
 |  └── File Storage (`storage/skills/<slug>/`) -> Master Copy `SKILL.md`        |
 |                                                                               |
 |  [ Sync Engine (Hybrid Symlink / Copy) ]                                      |
@@ -103,7 +103,7 @@
 ## 5. Directory Structure
 
 ```
-skillcraft/
+SkillBase/
 ├── main.go
 ├── go.mod
 ├── go.sum

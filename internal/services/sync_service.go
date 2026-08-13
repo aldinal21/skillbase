@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"skillcraft/internal/models"
+	"skillbase/internal/models"
 )
 
 // SyncService manages the deployment and synchronization of skills to agent targets.

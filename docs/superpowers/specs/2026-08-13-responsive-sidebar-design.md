@@ -1,7 +1,7 @@
-# Responsive Sidebar Layout Specification - SkillCraft
+# Responsive Sidebar Layout Specification - SkillBase
 
 ## Overview
-Spesifikasi ini memperbarui struktur layout UI **SkillCraft** dari Top-Nav Monolith menjadi **Collapsible Responsive Sidebar Layout** yang sepenuhnya adaptif untuk berbagai ukuran layar (mobile, tablet, hingga desktop).
+Spesifikasi ini memperbarui struktur layout UI **SkillBase** dari Top-Nav Monolith menjadi **Collapsible Responsive Sidebar Layout** yang sepenuhnya adaptif untuk berbagai ukuran layar (mobile, tablet, hingga desktop).
 
 ---
 
@@ -24,7 +24,7 @@ Spesifikasi ini memperbarui struktur layout UI **SkillCraft** dari Top-Nav Monol
 ## 2. Sidebar Navigation Structure & Filters
 
 1. **Header Section**:
-   - SkillCraft Logo & Title
+   - SkillBase Logo & Title
    - Desktop Collapse/Expand Toggle Button (`<<` / `>>`)
 2. **Main Navigation**:
    - ⚡ **All Skills**: Displays total vault collection.

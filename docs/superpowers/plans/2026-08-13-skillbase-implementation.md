@@ -1,8 +1,8 @@
-# SkillCraft Implementation Plan
+# SkillBase Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build SkillCraft, an All-in-One AI Agent Skill Manager written in Go (Echo v4) with SQLite, HTMX, Alpine.js, and Tailwind CSS.
+**Goal:** Build SkillBase, an All-in-One AI Agent Skill Manager written in Go (Echo v4) with SQLite, HTMX, Alpine.js, and Tailwind CSS.
 
 **Architecture:** A lightweight Go monolith web application powered by the Echo v4 web framework. It uses SQLite (`modernc.org/sqlite`) for local metadata storage and maintains a local Master Storage Vault (`storage/skills/<slug>/`). Skills are synced to universal target directories (e.g., `~/.gemini/antigravity-cli/skills`, `.agent/skills`) using a Hybrid Symlink Engine with an automatic Copy File fallback.
 
@@ -57,7 +57,7 @@ package models_test
 
 import (
 	"testing"
-	"skillcraft/internal/models"
+	"SkillBase/internal/models"
 )
 
 func TestSkillSlug(t *testing.T) {
@@ -76,7 +76,7 @@ Expected: FAIL (cannot find module or package)
 
 - [ ] **Step 3: Initialize Go module & create models**
 
-Run command: `go mod init skillcraft`
+Run command: `go mod init SkillBase`
 Add dependencies: `go get github.com/labstack/echo/v4 modernc.org/sqlite`
 
 Write `internal/models/skill.go`:
@@ -156,11 +156,11 @@ package database_test
 import (
 	"testing"
 	"os"
-	"skillcraft/internal/database"
+	"SkillBase/internal/database"
 )
 
 func TestInitDB(t *testing.T) {
-	dbPath := "test_skillcraft.db"
+	dbPath := "test_SkillBase.db"
 	defer os.Remove(dbPath)
 
 	db, err := database.InitDB(dbPath)
@@ -272,9 +272,9 @@ package repository_test
 import (
 	"os"
 	"testing"
-	"skillcraft/internal/database"
-	"skillcraft/internal/models"
-	"skillcraft/internal/repository"
+	"SkillBase/internal/database"
+	"SkillBase/internal/models"
+	"SkillBase/internal/repository"
 )
 
 func TestSkillRepository(t *testing.T) {
@@ -318,7 +318,7 @@ package repository
 
 import (
 	"database/sql"
-	"skillcraft/internal/models"
+	"SkillBase/internal/models"
 	"time"
 )
 
@@ -399,7 +399,7 @@ package repository
 
 import (
 	"database/sql"
-	"skillcraft/internal/models"
+	"SkillBase/internal/models"
 )
 
 type TargetRepository struct {
@@ -478,8 +478,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"skillcraft/internal/models"
-	"skillcraft/internal/services"
+	"SkillBase/internal/models"
+	"SkillBase/internal/services"
 )
 
 func TestDeploySkillFallbackCopy(t *testing.T) {
@@ -570,7 +570,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"skillcraft/internal/models"
+	"SkillBase/internal/models"
 )
 
 type SyncService struct {
@@ -672,7 +672,7 @@ package services_test
 
 import (
 	"testing"
-	"skillcraft/internal/services"
+	"SkillBase/internal/services"
 )
 
 func TestParseGitHubURL(t *testing.T) {
@@ -706,7 +706,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
-	"skillcraft/internal/models"
+	"SkillBase/internal/models"
 	"strings"
 )
 
@@ -805,7 +805,7 @@ Write `web/templates/layouts/base.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkillCraft - AI Agent Skill Manager</title>
+    <title>SkillBase - AI Agent Skill Manager</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- HTMX CDN -->
@@ -819,7 +819,7 @@ Write `web/templates/layouts/base.html`:
     <!-- Top Navigation Bar -->
     <header class="border-b border-slate-800 bg-slate-950 px-6 py-4 flex items-center justify-between">
         <div class="flex items-center space-x-3">
-            <span class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">⚡ SkillCraft</span>
+            <span class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">⚡ SkillBase</span>
             <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">v1.0</span>
         </div>
         <div class="flex items-center space-x-4">
@@ -899,8 +899,8 @@ import (
 	"html/template"
 	"io"
 	"net/http"
-	"skillcraft/internal/repository"
-	"skillcraft/internal/services"
+	"SkillBase/internal/repository"
+	"SkillBase/internal/services"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
@@ -987,16 +987,16 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"skillcraft/internal/database"
-	"skillcraft/internal/handlers"
-	"skillcraft/internal/repository"
-	"skillcraft/internal/services"
+	"SkillBase/internal/database"
+	"SkillBase/internal/handlers"
+	"SkillBase/internal/repository"
+	"SkillBase/internal/services"
 
 	"github.com/labstack/echo/v4"
 )
 
 func main() {
-	db, err := database.InitDB("skillcraft.db")
+	db, err := database.InitDB("SkillBase.db")
 	if err != nil {
 		log.Fatalf("Failed to connect SQLite: %v", err)
 	}
@@ -1018,14 +1018,14 @@ func main() {
 	e.POST("/skills/import", handler.ImportSkill)
 	e.DELETE("/skills/:id", handler.DeleteSkill)
 
-	fmt.Println("🚀 SkillCraft server running on http://localhost:8080")
+	fmt.Println("🚀 SkillBase server running on http://localhost:8080")
 	e.Logger.Fatal(e.Start(":8080"))
 }
 ```
 
 - [ ] **Step 3: Verify build and startup**
 
-Run: `go build -o skillcraft.exe main.go`
+Run: `go build -o SkillBase.exe main.go`
 Expected: Clean build without errors.
 
 - [ ] **Step 4: Commit**
@@ -1049,14 +1049,14 @@ Expected: ALL PASS
 
 - [ ] **Step 2: Run application build test**
 
-Run: `go build -o bin/skillcraft.exe main.go`
-Expected: Binary successfully generated in `bin/skillcraft.exe`.
+Run: `go build -o bin/SkillBase.exe main.go`
+Expected: Binary successfully generated in `bin/SkillBase.exe`.
 
 - [ ] **Step 3: Commit final build state**
 
 ```bash
 git add .
-git commit -m "chore: complete SkillCraft initial release build"
+git commit -m "chore: complete SkillBase initial release build"
 ```
 
 ---
@@ -1068,4 +1068,4 @@ git commit -m "chore: complete SkillCraft initial release build"
 
 ---
 
-Plan complete and saved to `docs/superpowers/plans/2026-08-13-skillcraft-implementation.md`.
+Plan complete and saved to `docs/superpowers/plans/2026-08-13-SkillBase-implementation.md`.

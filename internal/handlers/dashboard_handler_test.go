@@ -11,10 +11,10 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
-	"skillcraft/internal/database"
-	"skillcraft/internal/models"
-	"skillcraft/internal/repository"
-	"skillcraft/internal/services"
+	"skillbase/internal/database"
+	"skillbase/internal/models"
+	"skillbase/internal/repository"
+	"skillbase/internal/services"
 )
 
 type mockRoundTripper func(req *http.Request) (*http.Response, error)
@@ -31,7 +31,7 @@ func setupTestHandler(t *testing.T) (*DashboardHandler, *echo.Echo, func()) {
 		t.Fatalf("failed to init db: %v", err)
 	}
 
-	tempDir, err := os.MkdirTemp("", "skillcraft_handler_test_*")
+	tempDir, err := os.MkdirTemp("", "skillbase_handler_test_*")
 	if err != nil {
 		db.Close()
 		t.Fatalf("failed to create temp dir: %v", err)
@@ -118,8 +118,8 @@ func TestRenderDashboard(t *testing.T) {
 	}
 
 	body := rec.Body.String()
-	if !strings.Contains(body, "SkillCraft") || !strings.Contains(body, "System Overview") {
-		t.Errorf("expected body to contain 'SkillCraft' and 'System Overview', got:\n%s", body)
+	if !strings.Contains(body, "SkillBase") || !strings.Contains(body, "System Overview") {
+		t.Errorf("expected body to contain 'SkillBase' and 'System Overview', got:\n%s", body)
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"skillcraft/internal/models"
+	"skillbase/internal/models"
 )
 
 // SkillRepository manages CRUD operations for skills in SQLite.

@@ -27,7 +27,7 @@ func TestInitDB_InMemory(t *testing.T) {
 
 func TestInitDB_FileBasedAndIdempotent(t *testing.T) {
 	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "sub_dir", "test_skillcraft.db")
+	dbPath := filepath.Join(tmpDir, "sub_dir", "test_skillbase.db")
 
 	// First initialization
 	db1, err := InitDB(dbPath)

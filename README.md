@@ -1,19 +1,19 @@
-# ⚡ SkillCraft
+# ⚡ SkillBase
 
 > **All-in-One AI Agent Skill Manager** — Centralize, create, import, and sync skills across multiple AI coding agents (Antigravity CLI, Claude CLI, Cursor, local `.agent/skills`, and custom workspaces).
 
-![SkillCraft Banner](https://img.shields.io/badge/SkillCraft-v0.1.0--alpha-indigo?style=for-the-badge&logo=go)
+![SkillBase Banner](https://img.shields.io/badge/SkillBase-v0.1.0--alpha-indigo?style=for-the-badge&logo=go)
 ![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go)
 ![Stack](https://img.shields.io/badge/Stack-Echo%20%7C%20SQLite%20%7C%20HTMX%20%7C%20Alpine.js-purple?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)
 
 ---
 
-## 🌟 Why SkillCraft?
+## 🌟 Why SkillBase?
 
 As AI-assisted software development rapidly evolves, developers often manage agent skills (prompts, instructions, and tool definitions) scattered across different locations: global CLI config paths (`~/.gemini/antigravity-cli/skills`), local workspace folders (`.agent/skills`), or third-party GitHub repositories.
 
-**SkillCraft** provides a single, beautiful desktop-accessible web interface and backend engine to:
+**SkillBase** provides a single, beautiful desktop-accessible web interface and backend engine to:
 - **Centralize All Skills**: Maintain a single Master Vault of markdown skill files (`storage/skills/<slug>/SKILL.md`).
 - **Hybrid Sync Engine**: Instantly deploy skills to any target directory using native OS **Symlinks** (with Windows Junction support) and automatic fallback to recursive directory copying.
 - **Auto-Scan & Ingestion**: Existing skill folders (or symlinks) in your target paths are automatically discovered and adopted into your central vault with one click.
@@ -55,12 +55,12 @@ flowchart TD
 - **Go 1.21+** installed on your machine.
 - No CGO compiler (gcc) required! (Uses pure Go SQLite).
 
-### Running SkillCraft
+### Running SkillBase
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/skillcraft.git
-   cd skillcraft
+   git clone https://github.com/your-username/skillbase.git
+   cd skillbase
    ```
 
 2. **Run the server**:
@@ -76,7 +76,7 @@ flowchart TD
 ## 📁 Directory Structure
 
 ```
-skillcraft/
+skillbase/
 ├── main.go                       # Application entrypoint & Echo server setup
 ├── storage/
 │   └── skills/                   # Local Master Vault storage (git-ignored content)
@@ -97,7 +97,7 @@ skillcraft/
 
 ## 🧪 Running Tests
 
-SkillCraft is built using **Test-Driven Development (TDD)** with 100% pass coverage across core modules:
+SkillBase is built using **Test-Driven Development (TDD)** with 100% pass coverage across core modules:
 
 ```bash
 go test ./... -v

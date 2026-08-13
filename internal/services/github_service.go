@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"skillcraft/internal/models"
+	"skillbase/internal/models"
 )
 
 // GitHubService handles conversion of GitHub URLs and fetching skill content.

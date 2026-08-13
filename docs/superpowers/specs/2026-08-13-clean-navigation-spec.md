@@ -1,4 +1,4 @@
-# Clean Navigation & Overview Page Specification - SkillCraft
+# Clean Navigation & Overview Page Specification - SkillBase
 
 ## Overview
 Spesifikasi ini menyederhanakan halaman utama (`/`) menjadi **Clean Overview Dashboard** dan memindahkan seluruh daftar skill ke halaman khusus **Skills Library (`/skills`)**, serta memperbaiki navigasi sidebar agar 100% fungsional dan responsif.

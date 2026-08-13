@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Transform SkillCraft UI into a fully responsive, professional Collapsible Sidebar Layout for desktop and mobile drawer layout for smaller screens.
+**Goal:** Transform SkillBase UI into a fully responsive, professional Collapsible Sidebar Layout for desktop and mobile drawer layout for smaller screens.
 
 **Architecture:** Update `web/templates/layouts/base.html` to introduce Alpine.js controlled sidebar states (`mobileSidebarOpen`, `desktopSidebarCollapsed`). Add reusable sidebar partials and update Echo Handlers in `internal/handlers/dashboard_handler.go` to support source filtering (`custom` vs `github`).
 
@@ -63,7 +63,7 @@ Write `web/templates/partials/sidebar.html`:
                 </svg>
             </div>
             <div x-show="!desktopSidebarCollapsed" class="transition-opacity duration-200">
-                <h1 class="text-base font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent truncate">SkillCraft</h1>
+                <h1 class="text-base font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent truncate">SkillBase</h1>
                 <p class="text-[10px] text-slate-400 font-medium truncate">Agent Skill Manager</p>
             </div>
         </div>

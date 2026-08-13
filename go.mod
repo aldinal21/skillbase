@@ -1,4 +1,4 @@
-module skillcraft
+module skillbase
 
 go 1.26.5
 

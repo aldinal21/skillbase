@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Refactor SkillCraft layout to render a clean, focused Overview Dashboard on `/`, move full skill management grid to `/skills`, and fix all sidebar interaction links.
+**Goal:** Refactor SkillBase layout to render a clean, focused Overview Dashboard on `/`, move full skill management grid to `/skills`, and fix all sidebar interaction links.
 
 **Architecture:** Create dedicated Echo routes for `/` (Overview), `/skills` (Skills Library), and `/targets` (Agent Targets). Update templates to render a lean Overview page on home and keep full skill grid operations in `/skills`. Fix Alpine.js & HTMX sidebar handlers.
 
@@ -41,7 +41,7 @@ Write `web/templates/pages/overview.html`:
     <!-- Header Title -->
     <div>
         <h2 class="text-2xl font-bold text-slate-100">Overview Dashboard</h2>
-        <p class="text-sm text-slate-400">Welcome to SkillCraft. Manage and sync your AI Agent skills universally.</p>
+        <p class="text-sm text-slate-400">Welcome to SkillBase. Manage and sync your AI Agent skills universally.</p>
     </div>
 
     <!-- Quick Action Cards -->

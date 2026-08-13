@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"skillcraft/internal/database"
-	"skillcraft/internal/models"
-	"skillcraft/internal/repository"
+	"skillbase/internal/database"
+	"skillbase/internal/models"
+	"skillbase/internal/repository"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
