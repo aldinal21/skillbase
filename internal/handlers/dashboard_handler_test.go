@@ -117,8 +117,54 @@ func TestRenderDashboard(t *testing.T) {
 	}
 
 	body := rec.Body.String()
-	if !strings.Contains(body, "SkillCraft") {
-		t.Errorf("expected body to contain 'SkillCraft', got:\n%s", body)
+	if !strings.Contains(body, "SkillCraft") || !strings.Contains(body, "Overview Dashboard") {
+		t.Errorf("expected body to contain 'SkillCraft' and 'Overview Dashboard', got:\n%s", body)
+	}
+}
+
+func TestRenderOverview(t *testing.T) {
+	handler, e, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := handler.RenderOverview(c)
+	if err != nil {
+		t.Fatalf("RenderOverview returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "System Overview") || !strings.Contains(body, "Quick Actions") {
+		t.Errorf("expected overview body to contain 'System Overview' and 'Quick Actions', got:\n%s", body)
+	}
+}
+
+func TestRenderSkillsLibrary(t *testing.T) {
+	handler, e, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	req := httptest.NewRequest(http.MethodGet, "/skills", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := handler.RenderSkillsLibrary(c)
+	if err != nil {
+		t.Fatalf("RenderSkillsLibrary returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "Skills Library") {
+		t.Errorf("expected skills library body to contain 'Skills Library', got:\n%s", body)
 	}
 }
 

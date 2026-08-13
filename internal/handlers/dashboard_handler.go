@@ -33,6 +33,8 @@ func NewTemplateRenderer(files ...string) (*TemplateRenderer, error) {
 func NewTemplateRendererFromDir(rootDir string) (*TemplateRenderer, error) {
 	files := []string{
 		filepath.Join(rootDir, "templates", "layouts", "base.html"),
+		filepath.Join(rootDir, "templates", "pages", "overview.html"),
+		filepath.Join(rootDir, "templates", "pages", "skills.html"),
 		filepath.Join(rootDir, "templates", "partials", "sidebar.html"),
 		filepath.Join(rootDir, "templates", "partials", "skill_list.html"),
 		filepath.Join(rootDir, "templates", "partials", "create_modal.html"),
@@ -81,8 +83,8 @@ func NewDashboardHandler(
 	}
 }
 
-// RenderDashboard handles GET / rendering the full HTML dashboard page.
-func (h *DashboardHandler) RenderDashboard(c echo.Context) error {
+// RenderOverview handles GET / rendering the clean overview dashboard page.
+func (h *DashboardHandler) RenderOverview(c echo.Context) error {
 	skills, err := h.skillRepo.GetAll("")
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "Failed to load skills: "+err.Error())
@@ -97,7 +99,31 @@ func (h *DashboardHandler) RenderDashboard(c echo.Context) error {
 		Targets:     targets,
 		TotalSkills: len(skills),
 	}
-	return c.Render(http.StatusOK, "base.html", data)
+	return c.Render(http.StatusOK, "overview.html", data)
+}
+
+// RenderDashboard handles GET / rendering the full HTML dashboard page (delegates to RenderOverview).
+func (h *DashboardHandler) RenderDashboard(c echo.Context) error {
+	return h.RenderOverview(c)
+}
+
+// RenderSkillsLibrary handles GET /skills rendering the full Skills Library page.
+func (h *DashboardHandler) RenderSkillsLibrary(c echo.Context) error {
+	skills, err := h.skillRepo.GetAll("")
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "Failed to load skills: "+err.Error())
+	}
+	targets, err := h.targetRepo.GetAll()
+	if err != nil {
+		targets = []models.AgentTarget{}
+	}
+
+	data := DashboardData{
+		Skills:      skills,
+		Targets:     targets,
+		TotalSkills: len(skills),
+	}
+	return c.Render(http.StatusOK, "skills.html", data)
 }
 
 // SearchSkills handles GET /skills/search returning filtered skill grid partial.

@@ -1,0 +1,188 @@
+{{define "skills.html"}}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillCraft - Skills Library</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#151e2e',
+                            950: '#090d16',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white"
+      x-data="{ 
+          activePage: 'skills',
+          mobileSidebarOpen: false,
+          desktopSidebarCollapsed: false,
+          activeFilter: 'all',
+          createModalOpen: false, 
+          importModalOpen: false, 
+          editMode: false,
+          skillId: 0,
+          skillName: '',
+          skillSlug: '',
+          skillDescription: '',
+          skillTags: '',
+          skillContent: '',
+          importUrl: ''
+      }"
+      @open-create-modal.window="createModalOpen = true; editMode = false; skillId = 0; skillName = ''; skillSlug = ''; skillDescription = ''; skillTags = ''; skillContent = '';"
+      @open-edit-modal.window="createModalOpen = true; editMode = true; skillId = $event.detail.id; skillName = $event.detail.name; skillSlug = $event.detail.slug; skillDescription = $event.detail.description; skillTags = $event.detail.tags; skillContent = $event.detail.content;"
+      @open-import-modal.window="importModalOpen = true; importUrl = '';">
+
+    <!-- Responsive Sidebar Partial -->
+    {{template "sidebar.html" .}}
+
+    <!-- Main Content Wrapper with Dynamic Responsive Sidebar Offset -->
+    <div class="flex-1 flex flex-col transition-all duration-300 min-h-screen"
+         :class="desktopSidebarCollapsed ? 'md:pl-20' : 'md:pl-64'">
+
+        <!-- Top Navigation Bar -->
+        <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+                <!-- Brand Logo & Mobile Hamburger -->
+                <div class="flex items-center space-x-3">
+                    <button type="button"
+                            @click="mobileSidebarOpen = !mobileSidebarOpen"
+                            class="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 focus:outline-none transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                            SkillCraft
+                        </h1>
+                        <p class="text-xs text-slate-400 font-medium">Skills Library</p>
+                    </div>
+                </div>
+
+                <!-- Global Live Search -->
+                <div class="flex-1 max-w-md mx-4">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <input type="text"
+                               name="q"
+                               value="{{.SearchQuery}}"
+                               placeholder="Search skills by name, tag, or content..."
+                               hx-get="/skills/search"
+                               hx-trigger="keyup changed delay:300ms, search"
+                               hx-target="#skill-grid-container"
+                               hx-swap="outerHTML"
+                               class="w-full pl-9 pr-4 py-1.5 text-sm bg-slate-900/80 border border-slate-800 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all">
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center space-x-3">
+                    <button type="button"
+                            @click="$dispatch('open-import-modal')"
+                            class="inline-flex items-center px-3 py-1.5 border border-slate-700 hover:border-slate-600 rounded-lg text-sm font-medium text-slate-200 bg-slate-800/80 hover:bg-slate-800 transition-all shadow-sm">
+                        <svg class="w-4 h-4 mr-1.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Import GitHub
+                    </button>
+                    <button type="button"
+                            @click="$dispatch('open-create-modal')"
+                            class="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-md shadow-indigo-600/20 active:scale-95">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        New Skill
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Layout -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            <!-- Title Header & Actions -->
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800/60 pb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-100 tracking-tight">Skills Library</h2>
+                    <p class="text-sm text-slate-400 mt-1">Search, filter, and manage all agent skills in your central vault.</p>
+                </div>
+
+                <!-- Source Filter Pills Tabs -->
+                <div class="flex items-center bg-slate-900/90 border border-slate-800/90 p-1 rounded-xl space-x-1 shadow-inner self-start md:self-auto">
+                    <button type="button"
+                            hx-get="/skills/search?source="
+                            hx-target="#skill-grid-container"
+                            hx-swap="outerHTML"
+                            @click="activeFilter = 'all'"
+                            class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                            :class="activeFilter === 'all' 
+                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'">
+                        ⚡ All Skills
+                    </button>
+                    <button type="button"
+                            hx-get="/skills/search?source=custom"
+                            hx-target="#skill-grid-container"
+                            hx-swap="outerHTML"
+                            @click="activeFilter = 'custom'"
+                            class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                            :class="activeFilter === 'custom' 
+                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'">
+                        🛠️ Custom
+                    </button>
+                    <button type="button"
+                            hx-get="/skills/search?source=github"
+                            hx-target="#skill-grid-container"
+                            hx-swap="outerHTML"
+                            @click="activeFilter = 'github'"
+                            class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                            :class="activeFilter === 'github' 
+                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'">
+                        📦 GitHub
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic HTMX Skill Grid Section -->
+            {{template "skill_list.html" .}}
+        </main>
+
+        <!-- Modals -->
+        {{template "create_modal.html" .}}
+
+        <!-- Footer -->
+        <footer class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500">
+            <p>SkillCraft Agent Skill Manager &bull; Built with Go, Echo, HTMX, Alpine.js & Tailwind CSS</p>
+        </footer>
+    </div>
+</body>
+</html>
+{{end}}

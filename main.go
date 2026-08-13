@@ -59,7 +59,8 @@ func main() {
 	)
 
 	// Register Web UI Routes
-	e.GET("/", dashboardHandler.RenderDashboard)
+	e.GET("/", dashboardHandler.RenderOverview)
+	e.GET("/skills", dashboardHandler.RenderSkillsLibrary)
 	e.GET("/skills/search", dashboardHandler.SearchSkills)
 	e.POST("/skills", dashboardHandler.CreateSkill)
 	e.POST("/skills/import", dashboardHandler.ImportSkill)

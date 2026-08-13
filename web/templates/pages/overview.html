@@ -1,0 +1,321 @@
+{{define "overview.html"}}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillCraft - Clean Overview Dashboard</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#151e2e',
+                            950: '#090d16',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white"
+      x-data="{ 
+          activePage: 'overview',
+          mobileSidebarOpen: false,
+          desktopSidebarCollapsed: false,
+          activeFilter: 'all',
+          createModalOpen: false, 
+          importModalOpen: false, 
+          editMode: false,
+          skillId: 0,
+          skillName: '',
+          skillSlug: '',
+          skillDescription: '',
+          skillTags: '',
+          skillContent: '',
+          importUrl: ''
+      }"
+      @open-create-modal.window="createModalOpen = true; editMode = false; skillId = 0; skillName = ''; skillSlug = ''; skillDescription = ''; skillTags = ''; skillContent = '';"
+      @open-edit-modal.window="createModalOpen = true; editMode = true; skillId = $event.detail.id; skillName = $event.detail.name; skillSlug = $event.detail.slug; skillDescription = $event.detail.description; skillTags = $event.detail.tags; skillContent = $event.detail.content;"
+      @open-import-modal.window="importModalOpen = true; importUrl = '';">
+
+    <!-- Responsive Sidebar Partial -->
+    {{template "sidebar.html" .}}
+
+    <!-- Main Content Wrapper with Dynamic Responsive Sidebar Offset -->
+    <div class="flex-1 flex flex-col transition-all duration-300 min-h-screen"
+         :class="desktopSidebarCollapsed ? 'md:pl-20' : 'md:pl-64'">
+
+        <!-- Top Navigation Bar -->
+        <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+                <!-- Brand Logo & Mobile Hamburger -->
+                <div class="flex items-center space-x-3">
+                    <button type="button"
+                            @click="mobileSidebarOpen = !mobileSidebarOpen"
+                            class="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 focus:outline-none transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                            SkillCraft
+                        </h1>
+                        <p class="text-xs text-slate-400 font-medium">Overview Dashboard</p>
+                    </div>
+                </div>
+
+                <!-- Global Quick Action Buttons -->
+                <div class="flex items-center space-x-3">
+                    <button type="button"
+                            @click="$dispatch('open-import-modal')"
+                            class="inline-flex items-center px-3 py-1.5 border border-slate-700 hover:border-slate-600 rounded-lg text-sm font-medium text-slate-200 bg-slate-800/80 hover:bg-slate-800 transition-all shadow-sm">
+                        <svg class="w-4 h-4 mr-1.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Import GitHub
+                    </button>
+                    <button type="button"
+                            @click="$dispatch('open-create-modal')"
+                            class="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-md shadow-indigo-600/20 active:scale-95">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        New Skill
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Layout -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            <!-- Header Section -->
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800/60 pb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-100 tracking-tight">System Overview</h2>
+                    <p class="text-sm text-slate-400 mt-1">Monitor vault statistics, manage target agents, and perform quick actions.</p>
+                </div>
+                <a href="/skills"
+                   class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 transition-all shadow-sm">
+                    <span>Explore Skills Library</span>
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                    </svg>
+                </a>
+            </div>
+
+            <!-- Stats Summary Bar -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div class="bg-slate-900/80 border border-slate-800/80 rounded-xl p-5 flex items-center space-x-4 shadow-lg hover:border-slate-700/80 transition-all">
+                    <div class="p-3.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Vault Skills</p>
+                        <p class="text-3xl font-extrabold text-slate-100 mt-0.5" id="total-skills-count">{{.TotalSkills}}</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 border border-slate-800/80 rounded-xl p-5 flex items-center space-x-4 shadow-lg hover:border-slate-700/80 transition-all">
+                    <div class="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Active Agent Targets</p>
+                        <p class="text-3xl font-extrabold text-slate-100 mt-0.5">{{len .Targets}}</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 border border-slate-800/80 rounded-xl p-5 flex items-center space-x-4 shadow-lg hover:border-slate-700/80 transition-all">
+                    <div class="p-3.5 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Sync Engine Mode</p>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span class="text-sm font-bold text-purple-300">Hybrid Symlink / Copy</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Cards Grid -->
+            <div>
+                <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center">
+                    <span class="mr-2">⚡</span> Quick Actions
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <!-- Quick Card 1: Import -->
+                    <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-6 flex flex-col justify-between hover:border-purple-500/40 hover:bg-slate-900/90 transition-all group">
+                        <div>
+                            <div class="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4 group-hover:scale-110 transition-transform">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                            </div>
+                            <h4 class="text-base font-bold text-slate-100 group-hover:text-purple-300 transition-colors">Import GitHub Skill</h4>
+                            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                                Fetch and parse markdown skill files directly from any GitHub repository URL into your local vault.
+                            </p>
+                        </div>
+                        <button type="button"
+                                @click="$dispatch('open-import-modal')"
+                                class="mt-6 w-full py-2 px-3 rounded-lg text-xs font-semibold text-purple-300 bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-all flex items-center justify-center space-x-1">
+                            <span>Import GitHub Skill</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Quick Card 2: Create Custom -->
+                    <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-6 flex flex-col justify-between hover:border-indigo-500/40 hover:bg-slate-900/90 transition-all group">
+                        <div>
+                            <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                            </div>
+                            <h4 class="text-base font-bold text-slate-100 group-hover:text-indigo-300 transition-colors">Create Custom Skill</h4>
+                            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                                Write custom agent prompts, tools, and rules with rich markdown support and tag organization.
+                            </p>
+                        </div>
+                        <button type="button"
+                                @click="$dispatch('open-create-modal')"
+                                class="mt-6 w-full py-2 px-3 rounded-lg text-xs font-semibold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all flex items-center justify-center space-x-1">
+                            <span>New Custom Skill</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Quick Card 3: Browse Library -->
+                    <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-6 flex flex-col justify-between hover:border-emerald-500/40 hover:bg-slate-900/90 transition-all group">
+                        <div>
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                </svg>
+                            </div>
+                            <h4 class="text-base font-bold text-slate-100 group-hover:text-emerald-300 transition-colors">Skills Library</h4>
+                            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                                Search, filter by source (Custom vs GitHub), edit, or remove skills from your central vault.
+                            </p>
+                        </div>
+                        <a href="/skills"
+                           class="mt-6 w-full py-2 px-3 rounded-lg text-xs font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all flex items-center justify-center space-x-1">
+                            <span>View All Skills</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Agent Target List -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl overflow-hidden shadow-lg">
+                <div class="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-base">🎯</span>
+                        <h3 class="text-base font-semibold text-slate-200">Configured Agent Targets</h3>
+                        <span class="px-2 py-0.5 text-xs font-medium bg-slate-800 text-slate-300 rounded-full">{{len .Targets}}</span>
+                    </div>
+                    <a href="/targets" class="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors flex items-center">
+                        <span>Manage Targets</span>
+                        <svg class="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+
+                {{if .Targets}}
+                <div class="divide-y divide-slate-800/60">
+                    {{range .Targets}}
+                    <div class="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-800/30 transition-colors">
+                        <div class="flex items-start space-x-3">
+                            <div class="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 mt-0.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <h4 class="text-sm font-semibold text-slate-200">{{.Name}}</h4>
+                                    <span class="px-2 py-0.5 text-[10px] font-mono font-medium rounded bg-slate-800 text-slate-400 border border-slate-700/50 uppercase">
+                                        {{.Type}}
+                                    </span>
+                                </div>
+                                <p class="text-xs font-mono text-slate-400 mt-1 truncate max-w-md" title="{{.Path}}">
+                                    {{.Path}}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3 self-end sm:self-center">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+                                Synced & Active
+                            </span>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+                {{else}}
+                <div class="p-8 text-center">
+                    <div class="w-12 h-12 rounded-full bg-slate-800/80 border border-slate-700/50 flex items-center justify-center text-slate-500 mx-auto mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <p class="text-sm font-medium text-slate-300">No agent targets configured yet</p>
+                    <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                        Add target agent directories (such as Cursor, Claude Desktop, or custom agent folders) to start syncing skills automatically.
+                    </p>
+                    <a href="/targets" class="mt-4 inline-flex items-center px-3.5 py-1.5 rounded-lg text-xs font-medium text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 transition-all">
+                        <span>Configure Target Agent</span>
+                        <svg class="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </a>
+                </div>
+                {{end}}
+            </div>
+        </main>
+
+        <!-- Modals -->
+        {{template "create_modal.html" .}}
+
+        <!-- Footer -->
+        <footer class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500">
+            <p>SkillCraft Agent Skill Manager &bull; Built with Go, Echo, HTMX, Alpine.js & Tailwind CSS</p>
+        </footer>
+    </div>
+</body>
+</html>
+{{end}}

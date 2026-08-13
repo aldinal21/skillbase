@@ -24,8 +24,8 @@
     <!-- Sidebar Header -->
     <div class="h-16 px-4 flex items-center justify-between border-b border-slate-800/80">
         <!-- Logo & Title -->
-        <div class="flex items-center space-x-3 overflow-hidden">
-            <div class="w-9 h-9 min-w-[2.25rem] rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+        <a href="/" class="flex items-center space-x-3 overflow-hidden group">
+            <div class="w-9 h-9 min-w-[2.25rem] rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
@@ -36,7 +36,7 @@
                 </h1>
                 <p class="text-[10px] text-slate-400 font-medium truncate">Agent Skill Manager</p>
             </div>
-        </div>
+        </a>
 
         <!-- Desktop Collapse/Expand Toggle Button -->
         <button type="button"
@@ -62,73 +62,113 @@
 
     <!-- Navigation Section -->
     <div class="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-800">
-        <!-- Main Filters -->
+        <!-- Main Navigation Links -->
         <div>
             <p x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Filter Vault
+                Navigation
             </p>
             <nav class="space-y-1">
-                <!-- All Skills -->
+                <!-- Overview Dashboard -->
+                <a href="/"
+                   @click="if (window.innerWidth < 768) mobileSidebarOpen = false"
+                   class="w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all group relative"
+                   :class="activePage === 'overview' 
+                       ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-semibold' 
+                       : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent'">
+                    <span class="text-base group-hover:scale-110 transition-transform">📊</span>
+                    <span x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="ml-3 truncate">Overview</span>
+                    <span x-show="desktopSidebarCollapsed && !mobileSidebarOpen" 
+                          class="absolute left-full ml-2 px-2.5 py-1 bg-slate-800 text-slate-200 text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                        Overview
+                    </span>
+                </a>
+
+                <!-- Skills Library -->
+                <a href="/skills"
+                   @click="if (window.innerWidth < 768) mobileSidebarOpen = false"
+                   class="w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all group relative"
+                   :class="activePage === 'skills' 
+                       ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-semibold' 
+                       : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent'">
+                    <span class="text-base group-hover:scale-110 transition-transform">⚡</span>
+                    <span x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="ml-3 truncate">Skills Library</span>
+                    <span x-show="desktopSidebarCollapsed && !mobileSidebarOpen" 
+                          class="absolute left-full ml-2 px-2.5 py-1 bg-slate-800 text-slate-200 text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                        Skills Library
+                    </span>
+                </a>
+
+                <!-- Agent Targets -->
+                <a href="/targets"
+                   @click="if (window.innerWidth < 768) mobileSidebarOpen = false"
+                   class="w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all group relative"
+                   :class="activePage === 'targets' 
+                       ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-semibold' 
+                       : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent'">
+                    <span class="text-base group-hover:scale-110 transition-transform">🎯</span>
+                    <span x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="ml-3 truncate">Agent Targets</span>
+                    <span x-show="desktopSidebarCollapsed && !mobileSidebarOpen" 
+                          class="absolute left-full ml-2 px-2.5 py-1 bg-slate-800 text-slate-200 text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                        Agent Targets
+                    </span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Filter Vault Section (Active when on Skills Library page) -->
+        <div x-show="activePage === 'skills'">
+            <p x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                Quick Filter
+            </p>
+            <nav class="space-y-1">
+                <!-- All Skills Filter -->
                 <button type="button"
                         hx-get="/skills/search?source="
                         hx-target="#skill-grid-container"
                         hx-swap="outerHTML"
                         @click="activeFilter = 'all'; if (window.innerWidth < 768) mobileSidebarOpen = false"
-                        class="w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all group relative"
+                        class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all group relative"
                         :class="activeFilter === 'all' 
-                            ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' 
-                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent'">
-                    <span class="text-base group-hover:scale-110 transition-transform">⚡</span>
-                    <span x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="ml-3 truncate">All Skills</span>
-                    <!-- Tooltip for collapsed desktop -->
-                    <span x-show="desktopSidebarCollapsed && !mobileSidebarOpen" 
-                          class="absolute left-full ml-2 px-2.5 py-1 bg-slate-800 text-slate-200 text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                        All Skills
-                    </span>
+                            ? 'bg-slate-800 text-indigo-300 font-semibold' 
+                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'">
+                    <span class="text-sm">⚡</span>
+                    <span x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="ml-2.5 truncate">All Skills</span>
                 </button>
 
-                <!-- Custom Skills -->
+                <!-- Custom Skills Filter -->
                 <button type="button"
                         hx-get="/skills/search?source=custom"
                         hx-target="#skill-grid-container"
                         hx-swap="outerHTML"
                         @click="activeFilter = 'custom'; if (window.innerWidth < 768) mobileSidebarOpen = false"
-                        class="w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all group relative"
+                        class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all group relative"
                         :class="activeFilter === 'custom' 
-                            ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' 
-                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent'">
-                    <span class="text-base group-hover:scale-110 transition-transform">🛠️</span>
-                    <span x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="ml-3 truncate">Custom Skills</span>
-                    <span x-show="desktopSidebarCollapsed && !mobileSidebarOpen" 
-                          class="absolute left-full ml-2 px-2.5 py-1 bg-slate-800 text-slate-200 text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                        Custom Skills
-                    </span>
+                            ? 'bg-slate-800 text-indigo-300 font-semibold' 
+                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'">
+                    <span class="text-sm">🛠️</span>
+                    <span x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="ml-2.5 truncate">Custom Skills</span>
                 </button>
 
-                <!-- GitHub Skills -->
+                <!-- GitHub Skills Filter -->
                 <button type="button"
                         hx-get="/skills/search?source=github"
                         hx-target="#skill-grid-container"
                         hx-swap="outerHTML"
                         @click="activeFilter = 'github'; if (window.innerWidth < 768) mobileSidebarOpen = false"
-                        class="w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all group relative"
+                        class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all group relative"
                         :class="activeFilter === 'github' 
-                            ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' 
-                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent'">
-                    <span class="text-base group-hover:scale-110 transition-transform">📦</span>
-                    <span x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="ml-3 truncate">GitHub Skills</span>
-                    <span x-show="desktopSidebarCollapsed && !mobileSidebarOpen" 
-                          class="absolute left-full ml-2 px-2.5 py-1 bg-slate-800 text-slate-200 text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                        GitHub Skills
-                    </span>
+                            ? 'bg-slate-800 text-indigo-300 font-semibold' 
+                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'">
+                    <span class="text-sm">📦</span>
+                    <span x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="ml-2.5 truncate">GitHub Skills</span>
                 </button>
             </nav>
         </div>
 
-        <!-- Agent Targets Section -->
+        <!-- Agent Targets Summary Section -->
         <div>
             <p x-show="!desktopSidebarCollapsed || mobileSidebarOpen" class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Agent Targets ({{len .Targets}})
+                Active Targets ({{len .Targets}})
             </p>
             <div class="space-y-1">
                 {{range .Targets}}
