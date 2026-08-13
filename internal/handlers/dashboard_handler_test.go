@@ -12,6 +12,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"skillcraft/internal/database"
+	"skillcraft/internal/models"
 	"skillcraft/internal/repository"
 	"skillcraft/internal/services"
 )
@@ -343,3 +344,48 @@ func TestSearchSkills_WithSourceFilter(t *testing.T) {
 		t.Errorf("expected body to NOT contain Custom Skill 1, got:\n%s", bodyGH)
 	}
 }
+
+func TestDeploySkillToTarget(t *testing.T) {
+	handler, e, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	// Create skill
+	s := &models.Skill{Name: "TDD Skill", Slug: "tdd-skill", Content: "# TDD Content"}
+	_ = handler.skillRepo.Create(s)
+
+	// Create agent target
+	targetDir := t.TempDir()
+	target := &models.AgentTarget{Name: "Local Workspace", Path: targetDir, SyncMode: "copy", IsActive: true}
+	_ = handler.targetRepo.Create(target)
+
+
+
+
+	// POST /skills/:id/deploy?target_id=X
+	form := url.Values{}
+	form.Set("target_id", strconv.FormatInt(target.ID, 10))
+
+	req := httptest.NewRequest(http.MethodPost, "/skills/"+strconv.FormatInt(s.ID, 10)+"/deploy", strings.NewReader(form.Encode()))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues(strconv.FormatInt(s.ID, 10))
+
+	err := handler.DeploySkill(c)
+	if err != nil {
+		t.Fatalf("DeploySkill returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+
+	// Verify file was physically written to target directory
+	deployedFile := filepath.Join(targetDir, "tdd-skill", "SKILL.md")
+	data, err := os.ReadFile(deployedFile)
+	if err != nil || string(data) != "# TDD Content" {
+		t.Errorf("expected deployed content '# TDD Content', got '%s', err: %v", string(data), err)
+	}
+}
+

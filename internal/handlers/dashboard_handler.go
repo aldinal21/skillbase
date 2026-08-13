@@ -317,3 +317,36 @@ func (h *DashboardHandler) DeleteSkill(c echo.Context) error {
 		SuccessMsg:  "Skill deleted successfully.",
 	})
 }
+
+// DeploySkill handles POST /skills/:id/deploy deploying a skill to a specific agent target.
+func (h *DashboardHandler) DeploySkill(c echo.Context) error {
+	idParam := c.Param("id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "Invalid skill ID")
+	}
+
+	targetIDStr := c.FormValue("target_id")
+	targetID, err := strconv.ParseInt(targetIDStr, 10, 64)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "Invalid target ID")
+	}
+
+	skill, err := h.skillRepo.GetByID(id)
+	if err != nil || skill == nil {
+		return c.String(http.StatusNotFound, "Skill not found")
+	}
+
+	target, err := h.targetRepo.GetByID(targetID)
+	if err != nil || target == nil {
+		return c.String(http.StatusNotFound, "Target not found")
+	}
+
+	deployedType, err := h.syncService.DeploySkill(skill, target)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "Deployment failed: "+err.Error())
+	}
+
+	return c.String(http.StatusOK, fmt.Sprintf("Successfully deployed skill '%s' to '%s' via %s", skill.Name, target.Name, deployedType))
+}
+
