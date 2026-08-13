@@ -64,6 +64,7 @@ func main() {
 	e.GET("/skills/search", dashboardHandler.SearchSkills)
 	e.GET("/targets", dashboardHandler.RenderTargets)
 	e.POST("/targets", dashboardHandler.CreateTarget)
+	e.POST("/targets/:id/scan", dashboardHandler.ScanTarget)
 	e.POST("/skills", dashboardHandler.CreateSkill)
 	e.POST("/skills/import", dashboardHandler.ImportSkill)
 	e.POST("/skills/:id/deploy", dashboardHandler.DeploySkill)

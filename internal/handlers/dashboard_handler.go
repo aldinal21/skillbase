@@ -182,10 +182,60 @@ func (h *DashboardHandler) CreateTarget(c echo.Context) error {
 			IsActive: true,
 		}
 		_ = h.targetRepo.Create(target)
+
+		// Auto-scan and ingest existing skills from target directory upon creation
+		h.ingestSkillsFromTarget(target.Path)
 	}
 
 	return h.RenderTargets(c)
 }
+
+// ScanTarget handles POST /targets/:id/scan explicitly triggering scan & ingestion on a target directory.
+func (h *DashboardHandler) ScanTarget(c echo.Context) error {
+	idParam := c.Param("id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err == nil {
+		target, err := h.targetRepo.GetByID(id)
+		if err == nil && target != nil {
+			h.ingestSkillsFromTarget(target.Path)
+		}
+	}
+	return h.RenderTargets(c)
+}
+
+// ingestSkillsFromTarget helper scans target directory and saves discovered skills to DB & Vault.
+func (h *DashboardHandler) ingestSkillsFromTarget(targetPath string) {
+	if h.syncService == nil {
+		return
+	}
+
+	discovered, err := h.syncService.ScanAndIngestTarget(targetPath)
+	if err != nil || len(discovered) == 0 {
+		return
+	}
+
+	for _, s := range discovered {
+		existing, _ := h.skillRepo.GetBySlug(s.Slug)
+		if existing != nil {
+			existing.Content = s.Content
+			if existing.Name == "" {
+				existing.Name = s.Name
+			}
+			_ = h.skillRepo.Update(existing)
+		} else {
+			newSkill := &models.Skill{
+				Name:        s.Name,
+				Slug:        s.Slug,
+				Description: "Auto-ingested from agent target: " + targetPath,
+				Content:     s.Content,
+				SourceType:  "custom",
+				Tags:        "ingested,local",
+			}
+			_ = h.skillRepo.Create(newSkill)
+		}
+	}
+}
+
 
 
 

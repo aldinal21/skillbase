@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"skillcraft/internal/models"
 )
@@ -151,3 +152,81 @@ func copyFile(src, dst string) error {
 
 	return out.Close()
 }
+
+// IngestedSkill represents a skill discovered from scanning a target directory.
+type IngestedSkill struct {
+	Name    string
+	Slug    string
+	Content string
+}
+
+// ScanAndIngestTarget scans a target directory for existing skills (folders containing SKILL.md),
+// saves them to the Master Vault, and returns the discovered skills.
+func (s *SyncService) ScanAndIngestTarget(targetPath string) ([]IngestedSkill, error) {
+	entries, err := os.ReadDir(targetPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read target directory: %w", err)
+	}
+
+	var discovered []IngestedSkill
+
+	for _, entry := range entries {
+		// Read both regular directories and symlinks pointing to directories
+		entryPath := filepath.Join(targetPath, entry.Name())
+		info, err := os.Stat(entryPath)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+
+		// Look for SKILL.md (or skill.md)
+		skillFilePath := filepath.Join(entryPath, "SKILL.md")
+		data, err := os.ReadFile(skillFilePath)
+		if err != nil {
+			skillFilePath = filepath.Join(entryPath, "skill.md")
+			data, err = os.ReadFile(skillFilePath)
+			if err != nil {
+				continue // Not a skill folder
+			}
+		}
+
+		content := string(data)
+		slug := entry.Name()
+		name := extractSkillTitle(content, slug)
+
+		// Save/adopt discovered skill into master vault
+		_ = s.vaultService.SaveSkillToVault(slug, content)
+
+		discovered = append(discovered, IngestedSkill{
+			Name:    name,
+			Slug:    slug,
+			Content: content,
+		})
+	}
+
+	return discovered, nil
+}
+
+// extractSkillTitle attempts to find H1 markdown title (# Title) or falls back to humanized slug.
+func extractSkillTitle(content, fallbackSlug string) string {
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "# ") {
+			title := strings.TrimPrefix(line, "# ")
+			title = strings.TrimSpace(title)
+			if title != "" {
+				return title
+			}
+		}
+	}
+
+	// Humanize fallback slug (e.g. "code-reviewer" -> "Code Reviewer")
+	parts := strings.Split(fallbackSlug, "-")
+	for i, part := range parts {
+		if len(part) > 0 {
+			parts[i] = strings.ToUpper(part[:1]) + part[1:]
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
