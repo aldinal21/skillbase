@@ -1,32 +1,29 @@
 # SkillCraft - Technical Design Specification
 
 ## Overview
-**SkillCraft** adalah aplikasi All-in-One Agent Skill Manager berbasis **Go (Echo Framework)**, **SQLite**, **HTMX**, **Alpine.js**, dan **Tailwind CSS**. SkillCraft dirancang untuk mengelola, membuat, mengimpor dari GitHub, serta mendistribusikan (sync/deploy) *skills* untuk AI Agent (seperti Antigravity CLI, Claude Agent, `.agent/skills`, dsb.) melalui interface dashboard web yang ultra-responsif dan profesional.
+**SkillCraft** adalah aplikasi All-in-One Agent Skill Manager berbasis **Go (Echo Framework)**, **SQLite**, **HTMX**, **Alpine.js**, dan **Tailwind CSS**. SkillCraft dirancang untuk mengelola, membuat, mengimpor dari GitHub, serta mendistribusikan (*sync/deploy*) *skills* untuk AI Agent (seperti Antigravity CLI, Claude Agent, `.agent/skills`, dsb.) melalui interface dashboard web yang ultra-responsif dan profesional.
 
 ---
 
-## 1. System Architecture
+## 1. System Architecture & Storage Model
 
 ```
-+-----------------------------------------------------------------------+
-|                               SkillCraft                              |
-|                                                                       |
-|  [ Browser / UI Layer ]                                               |
-|  Tailwind CSS (CDN) + HTMX + Alpine.js                               |
-|          ^                                                            |
-|          | Dynamic HTMX Partials & JSON APIs                          |
-|          v                                                            |
-|  [ Go Backend Engine - Echo v4 Framework ]                             |
-|    ├── Handlers (Dashboard, Skill CRUD, Importer, Exporter, Settings) |
-|    ├── Services                                                       |
-|    │     ├── GitHub Importer (Fetch tree & markdown content)          |
-|    │     ├── Skill Formatter / Parser (Frontmatter parsing)          |
-|    │     └── Agent Sync Engine (Local filesystem deployment)          |
-|    └── DB Layer (Repository pattern with SQLite)                      |
-|          ^                                                            |
-|          v                                                            |
-|  [ SQLite Database ] (`skillcraft.db`)                                |
-+-----------------------------------------------------------------------+
++-------------------------------------------------------------------------------+
+|                                  SkillCraft                                   |
+|                                                                               |
+|  [ Master Storage / Vault ]                                                   |
+|  ├── SQLite Database (`skillcraft.db`) -> Metadata & Registry                  |
+|  └── File Storage (`storage/skills/<slug>/`) -> Master Copy `SKILL.md`        |
+|                                                                               |
+|  [ Sync Engine (Hybrid Symlink / Copy) ]                                      |
+|  ├── Mode 1: Symlink (Default) -> Direct link to Master Vault (Auto-Sync)     |
+|  └── Mode 2: Copy File (Fallback) -> Deep copy if OS/Disk restricts symlinks  |
+|                                                                               |
+|  [ Universal Agent Targets ]                                                  |
+|  ├── Target A (Global Antigravity): `~/.gemini/antigravity-cli/skills/`       |
+|  ├── Target B (Project-Local): `C:\path\to\project\.agent\skills\`             |
+|  └── Target C (Custom CLI/Agent): `~/.claude/skills/`                         |
++-------------------------------------------------------------------------------+
 ```
 
 ---
@@ -51,7 +48,7 @@
 |---|---|---|---|
 | `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Unique ID |
 | `name` | TEXT | NOT NULL | Skill title |
-| `slug` | TEXT | UNIQUE, NOT NULL | URL-friendly slug |
+| `slug` | TEXT | UNIQUE, NOT NULL | Folder & URL-friendly slug |
 | `description` | TEXT | | Brief overview of the skill |
 | `content` | TEXT | NOT NULL | Full Markdown body (`SKILL.md`) |
 | `tags` | TEXT | | Comma-separated or JSON array of tags |
@@ -66,6 +63,7 @@
 | `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Unique ID |
 | `name` | TEXT | NOT NULL | Display name (e.g. "Antigravity CLI", "Local Workspace") |
 | `path` | TEXT | NOT NULL | Absolute local directory path |
+| `sync_mode` | TEXT | DEFAULT 'symlink' | `'symlink'`, `'copy'`, `'auto'` |
 | `is_active` | BOOLEAN | DEFAULT 1 | Enabled state for quick sync |
 
 ### `skill_deployments`
@@ -74,31 +72,31 @@
 | `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Deployment record ID |
 | `skill_id` | INTEGER | FOREIGN KEY -> `skills(id)` | Skill reference |
 | `target_id` | INTEGER | FOREIGN KEY -> `agent_targets(id)` | Target agent path reference |
+| `deployed_type` | TEXT | NOT NULL | `'symlink'` or `'copy'` |
 | `deployed_at` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Deployment timestamp |
 
 ---
 
 ## 4. Key Features & Workflows
 
-### 4.1. Dashboard & Skill Management
-- Grid view & List view of stored skills with status badges (`custom`, `github`).
-- Search bar with instant filtering by title, tag, or description via HTMX.
-- Direct quick-copy / preview drawer for any skill.
+### 4.1. Universal Storage & Vault
+- Setiap skill disimpan di Database SQLite dan direktori internal `storage/skills/<slug>/SKILL.md`.
+- Perubahan pada master skill otomatis berdampak ke seluruh target yang di-symlink.
 
-### 4.2. GitHub Skill Importer
-1. User inputs a GitHub Repository URL (e.g., `https://github.com/user/agent-skills`).
-2. Server uses GitHub REST API / Raw content fetcher to list repository files and find `.md` or `SKILL.md` candidates.
-3. Server returns an HTMX dynamic file selection list.
-4. User selects files to import -> Server saves selected files to SQLite database.
+### 4.2. Universal Agent Sync Engine (Hybrid Symlink / Copy)
+1. **Default Symlink**: Menggunakan `os.Symlink` (atau Windows Junction Point `mklink /J`) mengarah dari folder target ke master vault `storage/skills/<slug>/`.
+2. **Automatic Fallback**: Jika pembuatan symlink gagal (misal: kendala Windows Permission / Developer Mode disabled), sistem otomatis beralih ke **Copy File** murni dan memberikan notifikasi status ke dashboard UI.
 
-### 4.3. Visual Skill Builder & Editor
-- Modal/Drawer with Alpine.js live state.
-- Form inputs for: Name, Description, Tags, Target Agents.
-- Full Markdown editor with live HTML preview via Marked.js.
+### 4.3. GitHub Skill Importer
+1. User memasukkan URL Repository/Folder GitHub.
+2. Server menggunakan API/Raw Fetcher untuk memindai daftar file `.md` / `SKILL.md`.
+3. Menampilkan dynamic checklist modal untuk memilih skill yang ingin di-import.
+4. Skill yang dipilih disimpan ke Vault internal & SQLite DB.
 
-### 4.4. Multi-Target Deployment (Agent Sync)
-- Ability to select one or multiple skills and deploy them directly to target agent directories on disk (e.g., `~/.gemini/antigravity-cli/skills/<skill-name>/SKILL.md` or `.agent/skills/<skill-name>/SKILL.md`).
-- Overwrite protection & deployment log history.
+### 4.4. Dashboard & Skill Builder
+- Grid view & List view dengan UI Tailwind CSS modern (Dark Slate theme).
+- Instant search & Filter by tag / source / target status via HTMX.
+- Fullscreen/Modal Skill Editor dengan live Markdown preview (Marked.js).
 
 ---
 
@@ -109,6 +107,8 @@ skillcraft/
 ├── main.go
 ├── go.mod
 ├── go.sum
+├── storage/
+│   └── skills/           # Master Vault Copy (Internal storage)
 ├── internal/
 │   ├── config/
 │   ├── database/
@@ -122,7 +122,7 @@ skillcraft/
 │   └── services/
 │       ├── github.go
 │       ├── parser.go
-│       └── syncer.go
+│       └── syncer.go      # Handles Symlink & Fallback Copy
 ├── web/
 │   ├── static/
 │   └── templates/
@@ -136,6 +136,11 @@ skillcraft/
 ---
 
 ## 6. Verification & Quality Plan
-- Unit tests for SQLite Repository CRUD.
-- Integration tests for Echo API endpoints & GitHub importer service.
-- UI validation for HTMX partial swapping and Alpine.js drawer interactions.
+- **Unit Tests**:
+  - Test Sync Engine (`os.Symlink` vs `CopyFile` fallback behavior).
+  - Test SQLite Repository CRUD operation.
+  - Test GitHub repository tree parser.
+- **Integration Tests**:
+  - Test Echo Web Endpoints (`/api/skills`, `/api/import`, `/api/deploy`).
+- **UI Verification**:
+  - Test dynamic HTMX partial swapping and Alpine.js interactive states.
