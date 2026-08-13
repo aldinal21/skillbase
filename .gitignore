@@ -1,11 +1,30 @@
-# Executables
+# Binaries and executables
 *.exe
+*.exe shadow
+*.dll
+*.so
+*.dylib
 skillcraft
+main
 
-# Database & Vault Storage
+# Database & SQLite files
 *.db
-storage/skills/
+*.db-journal
+*.db-shm
+*.db-wal
 
-# OS specific
+# Master Vault Storage (keep directory structure)
+storage/skills/*
+!storage/skills/.gitkeep
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
 Thumbs.db
 Desktop.ini
+
+# Temporary files & logs
+*.log
+scratch/
+tmp/
