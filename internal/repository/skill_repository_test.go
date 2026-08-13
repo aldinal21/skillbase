@@ -196,3 +196,47 @@ func TestSkillRepository_Delete(t *testing.T) {
 		t.Errorf("expected error deleting non-existent ID, got nil")
 	}
 }
+
+func TestSkillRepository_GetAllFiltered(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewSkillRepository(db)
+
+	skills := []models.Skill{
+		{Name: "Custom Go Skill", Content: "Go code", Tags: "golang", SourceType: "custom"},
+		{Name: "GitHub Go Skill", Content: "Go github code", Tags: "golang", SourceType: "github"},
+		{Name: "Custom Python Skill", Content: "Python script", Tags: "python", SourceType: "custom"},
+	}
+
+	for i := range skills {
+		if err := repo.Create(&skills[i]); err != nil {
+			t.Fatalf("Create failed for index %d: %v", i, err)
+		}
+	}
+
+	// Test filter by sourceType custom
+	customOnly, err := repo.GetAllFiltered("", "custom")
+	if err != nil {
+		t.Fatalf("GetAllFiltered custom failed: %v", err)
+	}
+	if len(customOnly) != 2 {
+		t.Errorf("expected 2 custom skills, got %d", len(customOnly))
+	}
+
+	// Test filter by sourceType github
+	githubOnly, err := repo.GetAllFiltered("", "github")
+	if err != nil {
+		t.Fatalf("GetAllFiltered github failed: %v", err)
+	}
+	if len(githubOnly) != 1 {
+		t.Errorf("expected 1 github skill, got %d", len(githubOnly))
+	}
+
+	// Test combined search + sourceType
+	combined, err := repo.GetAllFiltered("Go", "custom")
+	if err != nil {
+		t.Fatalf("GetAllFiltered combined failed: %v", err)
+	}
+	if len(combined) != 1 || combined[0].Name != "Custom Go Skill" {
+		t.Errorf("expected 1 combined skill 'Custom Go Skill', got %v", combined)
+	}
+}

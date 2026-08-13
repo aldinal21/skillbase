@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"skillcraft/internal/models"
 )
@@ -79,21 +80,31 @@ func (r *SkillRepository) GetBySlug(slug string) (*models.Skill, error) {
 // GetAll retrieves all skills from database. If search string is non-empty,
 // it filters results matching name, slug, description, tags, or content.
 func (r *SkillRepository) GetAll(search string) ([]models.Skill, error) {
+	return r.GetAllFiltered(search, "")
+}
+
+// GetAllFiltered retrieves skills filtered by search query and sourceType ("custom", "github", etc.).
+func (r *SkillRepository) GetAllFiltered(search, sourceType string) ([]models.Skill, error) {
 	var query string
 	var args []interface{}
+	var conditions []string
 
 	if search != "" {
-		query = `SELECT id, name, slug, description, content, tags, source_type, source_url, created_at, updated_at 
-		         FROM skills 
-		         WHERE name LIKE ? OR slug LIKE ? OR description LIKE ? OR tags LIKE ? OR content LIKE ? 
-		         ORDER BY updated_at DESC, id DESC`
+		conditions = append(conditions, "(name LIKE ? OR slug LIKE ? OR description LIKE ? OR tags LIKE ? OR content LIKE ?)")
 		pattern := "%" + search + "%"
 		args = append(args, pattern, pattern, pattern, pattern, pattern)
-	} else {
-		query = `SELECT id, name, slug, description, content, tags, source_type, source_url, created_at, updated_at 
-		         FROM skills 
-		         ORDER BY updated_at DESC, id DESC`
 	}
+
+	if sourceType != "" && sourceType != "all" {
+		conditions = append(conditions, "source_type = ?")
+		args = append(args, sourceType)
+	}
+
+	query = "SELECT id, name, slug, description, content, tags, source_type, source_url, created_at, updated_at FROM skills"
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query += " ORDER BY updated_at DESC, id DESC"
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {

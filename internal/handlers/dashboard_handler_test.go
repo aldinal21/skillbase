@@ -245,3 +245,55 @@ func TestDeleteSkill(t *testing.T) {
 		t.Errorf("expected 0 remaining skills, got %d", len(remaining))
 	}
 }
+
+func TestSearchSkills_WithSourceFilter(t *testing.T) {
+	handler, e, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	// Import GitHub skill
+	formImp := url.Values{}
+	formImp.Set("url", "https://github.com/example/repo/blob/main/SKILL.md")
+	reqImp := httptest.NewRequest(http.MethodPost, "/skills/import", strings.NewReader(formImp.Encode()))
+	reqImp.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
+	recImp := httptest.NewRecorder()
+	_ = handler.ImportSkill(e.NewContext(reqImp, recImp))
+
+	// Create custom skill
+	formCreate := url.Values{}
+	formCreate.Set("name", "Custom Skill 1")
+	formCreate.Set("content", "Content 1")
+	reqCreate := httptest.NewRequest(http.MethodPost, "/skills", strings.NewReader(formCreate.Encode()))
+	reqCreate.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
+	recCreate := httptest.NewRecorder()
+	_ = handler.CreateSkill(e.NewContext(reqCreate, recCreate))
+
+	// Search source=custom
+	reqCustom := httptest.NewRequest(http.MethodGet, "/skills/search?source=custom", nil)
+	recCustom := httptest.NewRecorder()
+	cCustom := e.NewContext(reqCustom, recCustom)
+	if err := handler.SearchSkills(cCustom); err != nil {
+		t.Fatalf("SearchSkills custom failed: %v", err)
+	}
+	bodyCustom := recCustom.Body.String()
+	if !strings.Contains(bodyCustom, "Custom Skill 1") {
+		t.Errorf("expected body to contain Custom Skill 1, got:\n%s", bodyCustom)
+	}
+	if strings.Contains(bodyCustom, "GitHub Imported Skill") {
+		t.Errorf("expected body to NOT contain GitHub Imported Skill, got:\n%s", bodyCustom)
+	}
+
+	// Search source=github
+	reqGH := httptest.NewRequest(http.MethodGet, "/skills/search?source=github", nil)
+	recGH := httptest.NewRecorder()
+	cGH := e.NewContext(reqGH, recGH)
+	if err := handler.SearchSkills(cGH); err != nil {
+		t.Fatalf("SearchSkills github failed: %v", err)
+	}
+	bodyGH := recGH.Body.String()
+	if !strings.Contains(bodyGH, "GitHub Imported Skill") {
+		t.Errorf("expected body to contain GitHub Imported Skill, got:\n%s", bodyGH)
+	}
+	if strings.Contains(bodyGH, "Custom Skill 1") {
+		t.Errorf("expected body to NOT contain Custom Skill 1, got:\n%s", bodyGH)
+	}
+}

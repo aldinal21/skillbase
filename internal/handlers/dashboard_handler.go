@@ -33,6 +33,7 @@ func NewTemplateRenderer(files ...string) (*TemplateRenderer, error) {
 func NewTemplateRendererFromDir(rootDir string) (*TemplateRenderer, error) {
 	files := []string{
 		filepath.Join(rootDir, "templates", "layouts", "base.html"),
+		filepath.Join(rootDir, "templates", "partials", "sidebar.html"),
 		filepath.Join(rootDir, "templates", "partials", "skill_list.html"),
 		filepath.Join(rootDir, "templates", "partials", "create_modal.html"),
 	}
@@ -102,7 +103,8 @@ func (h *DashboardHandler) RenderDashboard(c echo.Context) error {
 // SearchSkills handles GET /skills/search returning filtered skill grid partial.
 func (h *DashboardHandler) SearchSkills(c echo.Context) error {
 	q := strings.TrimSpace(c.QueryParam("q"))
-	skills, err := h.skillRepo.GetAll(q)
+	source := strings.TrimSpace(c.QueryParam("source"))
+	skills, err := h.skillRepo.GetAllFiltered(q, source)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "Failed to search skills: "+err.Error())
 	}
