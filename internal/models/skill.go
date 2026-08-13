@@ -22,11 +22,13 @@ type Skill struct {
 
 // AgentTarget represents a target destination path for skill synchronization.
 type AgentTarget struct {
-	ID       int64  `json:"id" db:"id"`
-	Name     string `json:"name" db:"name"`
-	Path     string `json:"path" db:"path"`
-	SyncMode string `json:"sync_mode" db:"sync_mode"`
-	IsActive bool   `json:"is_active" db:"is_active"`
+	ID          int64  `json:"id" db:"id"`
+	Name        string `json:"name" db:"name"`
+	AgentType   string `json:"agent_type" db:"agent_type"`
+	Description string `json:"description" db:"description"`
+	Path        string `json:"path" db:"path"`
+	SyncMode    string `json:"sync_mode" db:"sync_mode"`
+	IsActive    bool   `json:"is_active" db:"is_active"`
 }
 
 // Deployment represents a record of a skill deployed to an agent target.
