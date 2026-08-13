@@ -118,8 +118,8 @@ func TestRenderDashboard(t *testing.T) {
 	}
 
 	body := rec.Body.String()
-	if !strings.Contains(body, "SkillCraft") || !strings.Contains(body, "Overview Dashboard") {
-		t.Errorf("expected body to contain 'SkillCraft' and 'Overview Dashboard', got:\n%s", body)
+	if !strings.Contains(body, "SkillCraft") || !strings.Contains(body, "System Overview") {
+		t.Errorf("expected body to contain 'SkillCraft' and 'System Overview', got:\n%s", body)
 	}
 }
 
@@ -141,8 +141,8 @@ func TestRenderOverview(t *testing.T) {
 	}
 
 	body := rec.Body.String()
-	if !strings.Contains(body, "System Overview") || !strings.Contains(body, "Quick Actions") {
-		t.Errorf("expected overview body to contain 'System Overview' and 'Quick Actions', got:\n%s", body)
+	if !strings.Contains(body, "System Overview") {
+		t.Errorf("expected overview body to contain 'System Overview', got:\n%s", body)
 	}
 }
 

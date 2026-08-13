@@ -17,35 +17,53 @@ import (
 
 // TemplateRenderer implements echo.Renderer interface for rendering HTML templates.
 type TemplateRenderer struct {
-	templates *template.Template
+	templates map[string]*template.Template
 }
 
-// NewTemplateRenderer parses given template files and returns a TemplateRenderer instance.
-func NewTemplateRenderer(files ...string) (*TemplateRenderer, error) {
-	tmpl, err := template.ParseFiles(files...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse template files: %w", err)
-	}
-	return &TemplateRenderer{templates: tmpl}, nil
-}
-
-// NewTemplateRendererFromDir parses templates from layout and partial directories.
+// NewTemplateRendererFromDir parses templates for each page along with base layout and partials.
 func NewTemplateRendererFromDir(rootDir string) (*TemplateRenderer, error) {
-	files := []string{
-		filepath.Join(rootDir, "templates", "layouts", "base.html"),
-		filepath.Join(rootDir, "templates", "pages", "overview.html"),
-		filepath.Join(rootDir, "templates", "pages", "skills.html"),
-		filepath.Join(rootDir, "templates", "pages", "targets.html"),
-		filepath.Join(rootDir, "templates", "partials", "sidebar.html"),
-		filepath.Join(rootDir, "templates", "partials", "skill_list.html"),
-		filepath.Join(rootDir, "templates", "partials", "create_modal.html"),
+	baseLayout := filepath.Join(rootDir, "templates", "layouts", "base.html")
+	sidebarPartial := filepath.Join(rootDir, "templates", "partials", "sidebar.html")
+	skillListPartial := filepath.Join(rootDir, "templates", "partials", "skill_list.html")
+	modalPartial := filepath.Join(rootDir, "templates", "partials", "create_modal.html")
+
+	pages := map[string]string{
+		"overview.html": filepath.Join(rootDir, "templates", "pages", "overview.html"),
+		"skills.html":   filepath.Join(rootDir, "templates", "pages", "skills.html"),
+		"targets.html":  filepath.Join(rootDir, "templates", "pages", "targets.html"),
 	}
-	return NewTemplateRenderer(files...)
+
+	tmplMap := make(map[string]*template.Template)
+
+	for name, pagePath := range pages {
+		files := []string{baseLayout, pagePath, sidebarPartial, skillListPartial, modalPartial}
+		t, err := template.ParseFiles(files...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse template %s: %w", name, err)
+		}
+		tmplMap[name] = t
+	}
+
+	// Also parse partial-only renderer for HTMX partial swaps (e.g. skill_list.html)
+	partialTmpl, err := template.ParseFiles(skillListPartial)
+	if err == nil {
+		tmplMap["skill_list.html"] = partialTmpl
+	}
+
+	return &TemplateRenderer{templates: tmplMap}, nil
 }
 
 // Render executes the named HTML template with given data.
 func (t *TemplateRenderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
+	tmpl, ok := t.templates[name]
+	if !ok {
+		return fmt.Errorf("template %s not found", name)
+	}
+	// Always execute master "base.html" layout for page templates if present, or fallback to first template
+	if name == "skill_list.html" {
+		return tmpl.Execute(w, data)
+	}
+	return tmpl.ExecuteTemplate(w, "base.html", data)
 }
 
 // DashboardData holds view model state for dashboard pages and HTMX partial swaps.
