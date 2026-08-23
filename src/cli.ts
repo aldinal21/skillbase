@@ -5,6 +5,7 @@ import { CancelledError } from './ui/io.js';
 import { ensureContext } from './context.js';
 import { runList } from './commands/list.js';
 import { runFind } from './commands/find.js';
+import { runAdd } from './commands/add.js';
 
 const VERSION = '0.1.0';
 
@@ -40,6 +41,22 @@ export function createProgram(): Command {
       try {
         const ctx = await ensureContext(clackIo());
         await runFind(clackIo(), ctx, { query });
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('add')
+    .argument('<source>', 'owner/repo@skill | GitHub URL | local path')
+    .option('-y, --yes', 'skip confirmation prompts')
+    .option('-t, --targets <ids...>', 'deploy to these target ids (non-interactive)')
+    .description('Add a skill to the vault (and optionally deploy)')
+    .action(async (source: string, cmdOpts: { yes?: boolean; targets?: string[] }) => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runAdd(clackIo(), ctx, { source, ...cmdOpts });
       } catch (e) {
         if (e instanceof CancelledError) return;
         throw e;
