@@ -7,6 +7,10 @@
   "engines": { "node": ">=20" },
   "bin": { "skillbase": "bin/skillbase.js" },
   "files": ["bin", "dist"],
+  "keywords": ["ai", "agent", "skills", "skills.sh", "claude", "opencode", "cursor", "codex"],
+  "repository": { "type": "git", "url": "git+https://github.com/aldinal21/skillbase.git" },
+  "homepage": "https://github.com/aldinal21/skillbase#readme",
+  "bugs": { "url": "https://github.com/aldinal21/skillbase/issues" },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
