@@ -8,6 +8,8 @@ import { runFind } from './commands/find.js';
 import { runAdd } from './commands/add.js';
 import { runTargets } from './commands/targets.js';
 import { runUpdate } from './commands/update.js';
+import { runRemove } from './commands/remove.js';
+import { runScan } from './commands/scan.js';
 import { maybeCheckForUpdates } from './core/updater.js';
 
 const VERSION = '0.1.0';
@@ -101,6 +103,36 @@ export function createProgram(): Command {
       try {
         const ctx = await ensureContext(clackIo());
         await runUpdate(clackIo(), ctx, { names: names.length ? names : undefined, all: cmdOpts.all });
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('remove')
+    .alias('rm')
+    .argument('<name>', 'skill slug in the vault')
+    .option('--purge', 'also delete the vault copy')
+    .option('-t, --targets <ids...>', 'remove only from these target ids')
+    .description('Remove a skill from targets (vault copy kept unless --purge)')
+    .action(async (name: string, cmdOpts: { purge?: boolean; targets?: string[] }) => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runRemove(clackIo(), ctx, { name, ...cmdOpts });
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('scan')
+    .description('Find and adopt unmanaged skills in target directories')
+    .action(async () => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runScan(clackIo(), ctx, {});
       } catch (e) {
         if (e instanceof CancelledError) return;
         throw e;
