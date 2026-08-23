@@ -7,6 +7,8 @@ import { runList } from './commands/list.js';
 import { runFind } from './commands/find.js';
 import { runAdd } from './commands/add.js';
 import { runTargets } from './commands/targets.js';
+import { runUpdate } from './commands/update.js';
+import { maybeCheckForUpdates } from './core/updater.js';
 
 const VERSION = '0.1.0';
 
@@ -16,8 +18,21 @@ export function createProgram(): Command {
     .name('skillbase')
     .description('Vault-based AI agent skill manager')
     .version(VERSION, '-v, --version', 'print version')
-    .hook('preAction', async () => {
-      await ensureContext(clackIo());
+    .option('--check', 'force an immediate update check')
+    .hook('preAction', async (thisCmd) => {
+      const ctx = await ensureContext(clackIo());
+      try {
+        const n = await maybeCheckForUpdates({
+          cfg: ctx.cfg,
+          cfgPath: ctx.cfgPath,
+          vault: ctx.vault,
+          downloadDir: (ref, dir) => ctx.gh.downloadDir(ref, dir),
+          force: thisCmd.opts().check === true,
+        });
+        if (n > 0) clackIo().warn(`⬆ ${n} update(s) available — run 'skillbase update'`);
+      } catch {
+        /* silent — never disturb the main command */
+      }
     });
 
   program
@@ -71,6 +86,21 @@ export function createProgram(): Command {
       try {
         const ctx = await ensureContext(clackIo());
         await runTargets(clackIo(), ctx);
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('update')
+    .argument('[names...]', 'specific skills to update')
+    .option('-a, --all', 'approve every pending update with one confirmation')
+    .description('Check for skill updates and apply after review')
+    .action(async (names: string[], cmdOpts: { all?: boolean }) => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runUpdate(clackIo(), ctx, { names: names.length ? names : undefined, all: cmdOpts.all });
       } catch (e) {
         if (e instanceof CancelledError) return;
         throw e;
