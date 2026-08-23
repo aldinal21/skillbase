@@ -1,0 +1,27 @@
+{
+  "name": "skillbase",
+  "version": "0.1.0",
+  "description": "Vault-based AI agent skill manager — install skills.sh skills to Claude Code, OpenCode, .agents and more",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "bin": { "skillbase": "bin/skillbase.js" },
+  "files": ["bin", "dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "commander": "^14.0.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

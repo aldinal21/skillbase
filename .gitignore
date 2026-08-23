@@ -1,32 +1,6 @@
-# Binaries and executables
+node_modules/
+dist/
 *.exe
-*.exe shadow
-*.dll
-*.so
-*.dylib
-skillbase
-main
-
-# Database & SQLite files
-*.db
-*.db-journal
-*.db-shm
-*.db-wal
-
-# Master Vault Storage (keep directory structure)
-storage/skills/*
-!storage/skills/.gitkeep
-
-# IDEs & System files
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-Desktop.ini
-
-# Temporary files & logs
-*.log
-scratch/
-tmp/
+skillbase.db
 .superpowers/
-
+docs/superpowers/plans/*.bak
