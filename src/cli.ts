@@ -10,6 +10,8 @@ import { runTargets } from './commands/targets.js';
 import { runUpdate } from './commands/update.js';
 import { runRemove } from './commands/remove.js';
 import { runScan } from './commands/scan.js';
+import { runNew } from './commands/new.js';
+import { runConfig } from './commands/config-cmd.js';
 import { maybeCheckForUpdates } from './core/updater.js';
 
 const VERSION = '0.1.0';
@@ -133,6 +135,35 @@ export function createProgram(): Command {
       try {
         const ctx = await ensureContext(clackIo());
         await runScan(clackIo(), ctx, {});
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('new')
+    .argument('[name]', 'skill name (lowercase-hyphenated)')
+    .description('Scaffold a new SKILL.md into the vault')
+    .action(async (name?: string) => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runNew(clackIo(), ctx, { name });
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('config')
+    .argument('[key]', 'vaultPath | intervalHours | disableChecks')
+    .argument('[value]', 'new value')
+    .description('View or change configuration')
+    .action(async (key?: string, value?: string) => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runConfig(clackIo(), ctx, { key, value });
       } catch (e) {
         if (e instanceof CancelledError) return;
         throw e;
