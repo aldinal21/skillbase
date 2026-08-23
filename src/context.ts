@@ -26,7 +26,8 @@ async function build(io: CliIo): Promise<CliCtx> {
   let cfg = await loadConfig(cfgPath);
   if (!cfg) {
     cfg = defaultConfig();
-    const installed = await detectInstalledPresets();
+    const interactive = process.stdin.isTTY;
+    const installed = interactive ? await detectInstalledPresets() : [];
     if (installed.length > 0) {
       const chosen = await io
         .multiselect({
@@ -38,9 +39,11 @@ async function build(io: CliIo): Promise<CliCtx> {
       cfg.targets = installed.filter((pr) => keys.has(pr.key)).map(presetToTarget);
     }
     await saveConfig(cfg, cfgPath);
-    io.info(
-      `Config created at ${path.join(os.homedir(), '.skillbase', 'config.json')}`,
-    );
+    if (!interactive) {
+      io.info(`Config created at ${cfgPath} — run 'skillbase targets' to add deploy targets`);
+    } else {
+      io.info(`Config created at ${path.join(os.homedir(), '.skillbase', 'config.json')}`);
+    }
   }
   const token = process.env['GITHUB_TOKEN'] ?? process.env['GH_TOKEN'];
   const vault = new Vault(expandHome(cfg.vaultPath));

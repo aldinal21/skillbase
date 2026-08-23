@@ -4,6 +4,7 @@ import { clackIo } from './ui/clack-io.js';
 import { CancelledError } from './ui/io.js';
 import { ensureContext } from './context.js';
 import { runList } from './commands/list.js';
+import { runFind } from './commands/find.js';
 
 const VERSION = '0.1.0';
 
@@ -25,6 +26,20 @@ export function createProgram(): Command {
       try {
         const ctx = await ensureContext(clackIo());
         await runList(clackIo(), ctx, {});
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('find')
+    .argument('[query]', 'search the skills.sh registry')
+    .description('Search skills.sh for skills')
+    .action(async (query?: string) => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runFind(clackIo(), ctx, { query });
       } catch (e) {
         if (e instanceof CancelledError) return;
         throw e;
