@@ -109,7 +109,7 @@ export async function runAdd(
     let chosenIds: string[] = [];
     if (opts.targets) {
       chosenIds = opts.targets;
-    } else if (active.length > 0 && process.stdout.isTTY) {
+    } else if (!opts.yes && active.length > 0) {
       chosenIds = await io.multiselect({
         message: 'Deploy to targets',
         options: active.map((t) => ({ value: t.id, label: t.name })),
