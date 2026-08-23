@@ -6,6 +6,7 @@ import { ensureContext } from './context.js';
 import { runList } from './commands/list.js';
 import { runFind } from './commands/find.js';
 import { runAdd } from './commands/add.js';
+import { runTargets } from './commands/targets.js';
 
 const VERSION = '0.1.0';
 
@@ -57,6 +58,19 @@ export function createProgram(): Command {
       try {
         const ctx = await ensureContext(clackIo());
         await runAdd(clackIo(), ctx, { source, ...cmdOpts });
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('targets')
+    .description('Manage deploy target directories')
+    .action(async () => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runTargets(clackIo(), ctx);
       } catch (e) {
         if (e instanceof CancelledError) return;
         throw e;

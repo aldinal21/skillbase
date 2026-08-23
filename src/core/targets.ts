@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { TargetConfig } from '../types.js';
+import type { AppConfig, TargetConfig } from '../types.js';
 
 export interface AgentPreset {
   key: string;
@@ -46,4 +46,26 @@ export function detectInstalledPresets(): Promise<AgentPreset[]> {
 export function presetToTarget(p: AgentPreset): TargetConfig {
   return { id: `${p.key}-global`, name: p.name, path: p.globalPath, type: p.key, active: true };
 }
+
+export function addTargetById(cfg: AppConfig, p: AgentPreset): AppConfig {
+  if (cfg.targets.some((t) => t.id === `${p.key}-global`)) return cfg;
+  return { ...cfg, targets: [...cfg.targets, presetToTarget(p)] };
+}
+
+export function addCustomTarget(cfg: AppConfig, name: string, rawPath: string): AppConfig {
+  const base =
+    path.posix.basename(rawPath.replace(/\\/g, '/')).replace(/[^a-z0-9-]/gi, '').toLowerCase() || 'target';
+  const id = `${base}-custom`;
+  if (cfg.targets.some((t) => t.id === id)) return cfg;
+  return { ...cfg, targets: [...cfg.targets, { id, name, path: rawPath, type: 'custom', active: true }] };
+}
+
+export function removeTargetById(cfg: AppConfig, id: string): AppConfig {
+  return { ...cfg, targets: cfg.targets.filter((t) => t.id !== id) };
+}
+
+export function toggleTargetById(cfg: AppConfig, id: string): AppConfig {
+  return { ...cfg, targets: cfg.targets.map((t) => (t.id === id ? { ...t, active: !t.active } : t)) };
+}
+
 
