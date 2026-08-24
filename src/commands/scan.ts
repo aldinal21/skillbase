@@ -3,7 +3,21 @@ import { findUnmanaged, adopt } from '../core/scanner.js';
 import type { CliCtx } from '../context.js';
 import type { CliIo } from '../ui/io.js';
 
-export async function runScan(io: CliIo, ctx: CliCtx, _opts: {} = {}): Promise<void> {
+export interface ScanDeps {
+  interactive?: boolean;
+}
+
+function truncate(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+}
+
+export async function runScan(
+  io: CliIo,
+  ctx: CliCtx,
+  _opts: {} = {},
+  deps: ScanDeps = {},
+): Promise<void> {
+  const interactive = deps.interactive ?? process.stdin.isTTY;
   const sp = io.spinner();
   sp.start('Scanning targets…');
   let found;
@@ -16,15 +30,25 @@ export async function runScan(io: CliIo, ctx: CliCtx, _opts: {} = {}): Promise<v
     io.info('No unmanaged skills found.');
     return;
   }
-  for (const u of found) {
-    io.info(`${picocolors.bold(u.slugGuess)} — ${u.description}`);
-    const ok = await io.confirm({ message: `Adopt "${u.slugGuess}" into the vault?` });
-    if (!ok) {
-      io.info('Left as external (untracked).');
-      continue;
-    }
+
+  if (!interactive) {
+    io.info(`Found ${found.length} unmanaged skill(s):`);
+    for (const u of found) io.info(`  ${u.slugGuess} — ${truncate(u.description, 70)}`);
+    io.info(picocolors.dim('Run `skillbase scan` in a terminal to adopt them.'));
+    return;
+  }
+
+  const selected = await io.multiselect({
+    message: 'Adopt which skills into the vault? (space to toggle, enter to confirm)',
+    options: found.map((u) => ({ value: u.slugGuess, label: `${u.slugGuess} — ${truncate(u.description, 60)}` })),
+    initialValues: found.map((u) => u.slugGuess),
+  });
+
+  let adopted = 0;
+  for (const u of found.filter((x) => selected.includes(x.slugGuess))) {
     await adopt(ctx.vault, u);
     io.info(`Adopted ${picocolors.bold(u.slugGuess)}`);
+    adopted++;
   }
-  io.outro('Scan complete.');
+  io.outro(`Adopted ${adopted} skill(s), ${found.length - adopted} left untracked.`);
 }

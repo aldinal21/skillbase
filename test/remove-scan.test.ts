@@ -52,19 +52,42 @@ describe('runRemove', () => {
 });
 
 describe('runScan', () => {
-  it('adopts an unmanaged folder', async () => {
+  it('adopts selected unmanaged folders in one batch', async () => {
     const { root, ctx, vault } = await setup();
     const planted = path.join(root, 'target', 'legacy');
     await fs.mkdir(planted, { recursive: true });
     await fs.writeFile(path.join(planted, 'SKILL.md'), DOC.replace('tdd', 'legacy'));
 
-    const { io, out } = createTestIo({ confirms: [true] }); // adopt?
-    await runScan(io, ctx, {});
+    const { io, out } = createTestIo({ multis: [['legacy']] }); // preselected batch checklist
+    await runScan(io, ctx, {}, { interactive: true });
     expect(await vault.get('legacy')).not.toBeNull();
     // original location now serves vault content through a link
     await expect(fs.readFile(path.join(planted, 'SKILL.md'), 'utf8')).resolves.toBe(
       DOC.replace('tdd', 'legacy'),
     );
-    expect(out.join('\n')).toMatch(/adopted/i);
+    expect(out.join('\n')).toMatch(/adopted 1/i);
+  });
+
+  it('declining selection adopts nothing', async () => {
+    const { root, ctx, vault } = await setup();
+    const planted = path.join(root, 'target', 'legacy');
+    await fs.mkdir(planted, { recursive: true });
+    await fs.writeFile(path.join(planted, 'SKILL.md'), DOC.replace('tdd', 'legacy'));
+
+    const { io } = createTestIo({ multis: [[]] }); // user unchecks everything
+    await runScan(io, ctx, {}, { interactive: true });
+    expect(await vault.get('legacy')).toBeNull();
+  });
+
+  it('non-interactive mode lists without prompting', async () => {
+    const { root, ctx, vault } = await setup();
+    const planted = path.join(root, 'target', 'legacy');
+    await fs.mkdir(planted, { recursive: true });
+    await fs.writeFile(path.join(planted, 'SKILL.md'), DOC.replace('tdd', 'legacy'));
+
+    const { io, out } = createTestIo({});
+    await runScan(io, ctx, {}, { interactive: false });
+    expect(out.join('\n')).toMatch(/legacy/);
+    expect(await vault.get('legacy')).toBeNull();
   });
 });
