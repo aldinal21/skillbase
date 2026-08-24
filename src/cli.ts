@@ -12,6 +12,7 @@ import { runRemove } from './commands/remove.js';
 import { runScan } from './commands/scan.js';
 import { runNew } from './commands/new.js';
 import { runConfig } from './commands/config-cmd.js';
+import { runMigrate } from './commands/migrate.js';
 import { maybeCheckForUpdates } from './core/updater.js';
 
 const VERSION = '0.1.0';
@@ -164,6 +165,21 @@ export function createProgram(): Command {
       try {
         const ctx = await ensureContext(clackIo());
         await runConfig(clackIo(), ctx, { key, value });
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('migrate')
+    .description('One-shot: activate detected agents, adopt all existing skills, relink duplicates')
+    .option('--dry-run', 'show what would happen without changing anything')
+    .option('-y, --yes', 'skip the confirmation prompt')
+    .action(async (cmdOpts: { dryRun?: boolean; yes?: boolean }) => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runMigrate(clackIo(), ctx, cmdOpts);
       } catch (e) {
         if (e instanceof CancelledError) return;
         throw e;

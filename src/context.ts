@@ -2,6 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DEFAULT_CONFIG_PATH, defaultConfig, expandHome, loadConfig, saveConfig } from './core/config.js';
 import { detectInstalledPresets, presetToTarget } from './core/targets.js';
+import { findUnmanaged } from './core/scanner.js';
 import { GithubClient } from './core/github.js';
 import { Vault } from './core/vault.js';
 import type { CliIo } from './ui/io.js';
@@ -23,10 +24,10 @@ export async function ensureContext(io: CliIo): Promise<CliCtx> {
 
 async function build(io: CliIo): Promise<CliCtx> {
   const cfgPath = DEFAULT_CONFIG_PATH();
+  const interactive = Boolean(process.stdin.isTTY);
   let cfg = await loadConfig(cfgPath);
   if (!cfg) {
     cfg = defaultConfig();
-    const interactive = process.stdin.isTTY;
     const installed = interactive ? await detectInstalledPresets() : [];
     if (installed.length > 0) {
       const chosen = await io
@@ -47,5 +48,28 @@ async function build(io: CliIo): Promise<CliCtx> {
   }
   const token = process.env['GITHUB_TOKEN'] ?? process.env['GH_TOKEN'];
   const vault = new Vault(expandHome(cfg.vaultPath));
-  return { cfgPath, cfg, vault, gh: new GithubClient(undefined, token) };
+  const ctx: CliCtx = { cfgPath, cfg, vault, gh: new GithubClient(undefined, token) };
+
+  // First run with chosen targets: offer one-shot migration of existing skills.
+  if (interactive && cfg.targets.length > 0) {
+    try {
+      const found = await findUnmanaged(vault, cfg.targets);
+      if (found.length > 0) {
+        const ok = await io
+          .confirm({
+            message: `Found ${found.length} existing skill(s) — migrate them all into the vault now? (recommended)`,
+            initialValue: true,
+          })
+          .catch(() => false);
+        if (ok) {
+          const { runMigrate } = await import('./commands/migrate.js');
+          await runMigrate(io, ctx, { yes: true });
+        }
+      }
+    } catch {
+      /* migration offer is best-effort */
+    }
+  }
+
+  return ctx;
 }
