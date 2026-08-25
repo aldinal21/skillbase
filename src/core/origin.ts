@@ -1,4 +1,5 @@
 import type { GithubClient } from './github.js';
+import { findDirForSkill } from './github.js';
 import { searchSkills, type SearchResult } from './registry.js';
 import { Vault } from './vault.js';
 import type { SkillMeta } from '../types.js';
@@ -21,13 +22,12 @@ export async function matchRegistrySkill(slug: string, fetchImpl: typeof fetch =
  * does not actually contain the skill (registry snapshots can outlive repos). */
 export async function attachRegistrySource(
   vault: Vault,
-  gh: Pick<GithubClient, 'findSkillDirs'>,
+  gh: Pick<GithubClient, 'findSkillDirs' | 'fetchSkillMd'>,
   meta: SkillMeta,
   match: SearchResult,
 ): Promise<SkillMeta | null> {
   const [owner, repo] = match.source.split('/');
-  const dirs = await gh.findSkillDirs({ owner: owner!, repo: repo! });
-  const dir = dirs.find((d) => d.split('/').pop() === match.skillId);
+  const dir = await findDirForSkill(gh, { owner: owner!, repo: repo! }, match.skillId);
   if (dir === undefined) return null;
   meta.source = { type: 'registry', owner: owner!, repo: repo!, path: dir, skillId: match.skillId };
   await vault.saveMeta(meta);

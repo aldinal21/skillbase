@@ -1,5 +1,6 @@
 import picocolors from 'picocolors';
 import type { GithubClient, RepoRef } from '../core/github.js';
+import { findDirForSkill } from '../core/github.js';
 import { RegistryError, searchSkills, type SearchResult } from '../core/registry.js';
 import { formatInstalls } from '../ui/format.js';
 import { renderTable } from '../ui/table.js';
@@ -12,12 +13,11 @@ export interface FindDeps {
 }
 
 export async function resolveSkillDir(
-  gh: Pick<GithubClient, 'findSkillDirs'>,
+  gh: Pick<GithubClient, 'findSkillDirs' | 'fetchSkillMd'>,
   ref: RepoRef,
   skillName: string,
 ): Promise<string | null> {
-  const dirs = await gh.findSkillDirs(ref);
-  return dirs.find((d) => d.split('/').pop() === skillName) ?? null;
+  return (await findDirForSkill(gh, ref, skillName)) ?? null;
 }
 
 export async function runFind(

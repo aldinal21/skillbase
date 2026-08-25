@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import picocolors from 'picocolors';
 import { expandHome } from '../core/config.js';
-import { parseSource, type GithubClient } from '../core/github.js';
+import { parseSource, findDirForSkill, type GithubClient } from '../core/github.js';
 import { FrontmatterError, validateSkillFolder } from '../core/frontmatter.js';
 import { deploy } from '../core/sync.js';
 import { readTree } from '../core/vault.js';
@@ -46,9 +46,7 @@ export async function runAdd(
       const gh = deps.gh ?? ctx.gh;
       let dir: string;
       if (parsed.skillName) {
-        const resolved = (await gh.findSkillDirs(parsed.repo)).find(
-          (d) => d.split('/').pop() === parsed.skillName,
-        );
+        const resolved = await findDirForSkill(gh, parsed.repo, parsed.skillName);
         if (resolved === undefined) {
           io.error(`Skill "${parsed.skillName}" not found in ${parsed.repo.owner}/${parsed.repo.repo}`);
           return null;

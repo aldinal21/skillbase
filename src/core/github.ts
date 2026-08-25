@@ -1,4 +1,5 @@
 import type { FetchedFile } from '../types.js';
+import { parseFrontmatter } from './frontmatter.js';
 
 const API_BASE = 'https://api.github.com';
 const RAW_BASE = 'https://raw.githubusercontent.com';
@@ -115,6 +116,16 @@ export class GithubClient {
     return res.text();
   }
 
+  /** Fetch just the SKILL.md of a skill dir (null when missing). */
+  async fetchSkillMd(ref: RepoRef, dir: string): Promise<string | null> {
+    const p = dir === '' || dir === '.' ? 'SKILL.md' : `${dir}/SKILL.md`;
+    try {
+      return await this.fetchRaw(ref, p);
+    } catch {
+      return null;
+    }
+  }
+
   async downloadDir(ref: RepoRef, dir: string): Promise<FetchedFile[]> {
     const blobs = await this.listTree(ref);
     const prefix = dir === '.' || dir === '' ? '' : dir.replace(/\/$/, '') + '/';
@@ -136,4 +147,26 @@ export class GithubClient {
     const dirs = await this.findSkillDirs(ref);
     return dirs.map((d) => ({ name: d === '' ? ref.repo : d.split('/').pop()!, dir: d }));
   }
+}
+
+/** Resolve the repo dir for a registry skill: folder basename first, then SKILL.md frontmatter name
+ * (skills.sh slugs can differ from folder names, e.g. vercel-react-best-practices → react-best-practices). */
+export async function findDirForSkill(
+  gh: Pick<GithubClient, 'findSkillDirs' | 'fetchSkillMd'>,
+  ref: RepoRef,
+  skillId: string,
+): Promise<string | undefined> {
+  const dirs = await gh.findSkillDirs(ref);
+  const byBasename = dirs.find((d) => d.split('/').pop() === skillId);
+  if (byBasename !== undefined) return byBasename;
+  for (const d of dirs.slice(0, 30)) {
+    const raw = await gh.fetchSkillMd(ref, d);
+    if (!raw) continue;
+    try {
+      if (parseFrontmatter(raw).name === skillId) return d;
+    } catch {
+      /* invalid SKILL.md — keep looking */
+    }
+  }
+  return undefined;
 }

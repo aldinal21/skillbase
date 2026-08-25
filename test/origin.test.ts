@@ -57,6 +57,34 @@ describe('attachRegistrySource', () => {
     expect((await vault.get('tdd'))!.source.type).toBe('registry');
   });
 
+  it('resolves by frontmatter name when folder name differs from registry slug', async () => {
+    const root = await mkTmp();
+    const vault = new Vault(path.join(root, 'vault'));
+    const meta = await vault.install('vercel-react-best-practices', [{ path: 'SKILL.md', contents: DOC }], {
+      type: 'local',
+    });
+    // repo folder is react-best-practices, but SKILL.md frontmatter name is vercel-react-best-practices
+    const gh = {
+      findSkillDirs: async () => [
+        'skills/composition-patterns',
+        'skills/react-best-practices',
+        'skills/writing-guidelines',
+      ],
+      fetchSkillMd: async (_ref: any, dir: string) =>
+        dir === 'skills/react-best-practices'
+          ? '---\nname: vercel-react-best-practices\ndescription: d\n---\nx'
+          : '---\nname: something-else\ndescription: d\n---\nx',
+    };
+    const updated = await attachRegistrySource(vault, gh as any, meta, {
+      id: 'vercel-labs/agent-skills/vercel-react-best-practices',
+      skillId: 'vercel-react-best-practices',
+      name: 'vercel-react-best-practices',
+      installs: 100,
+      source: 'vercel-labs/agent-skills',
+    });
+    expect(updated!.source).toMatchObject({ path: 'skills/react-best-practices', skillId: 'vercel-react-best-practices' });
+  });
+
   it('returns null (and keeps local) when repo HEAD lacks the skill', async () => {
     const root = await mkTmp();
     const vault = new Vault(path.join(root, 'vault'));

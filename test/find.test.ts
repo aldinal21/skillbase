@@ -22,6 +22,7 @@ describe('resolveSkillDir', () => {
   it('returns first dir whose basename matches', async () => {
     const gh = {
       findSkillDirs: async () => ['skills/zod', 'skills/tdd'],
+      fetchSkillMd: async () => null,
     };
     expect(await resolveSkillDir(gh as any, { owner: 'o', repo: 'r' }, 'tdd')).toBe('skills/tdd');
     expect(await resolveSkillDir(gh as any, { owner: 'o', repo: 'r' }, 'nope')).toBeNull();

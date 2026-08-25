@@ -1,6 +1,7 @@
 import picocolors from 'picocolors';
 import { searchSkills, type SearchResult } from '../core/registry.js';
 import { attachRegistrySource } from '../core/origin.js';
+import { findDirForSkill } from '../core/github.js';
 import { applyUpdate, summarizeChanges } from '../core/updater.js';
 import { lineDiff } from '../ui/diff.js';
 import { formatInstalls } from '../ui/format.js';
@@ -155,10 +156,7 @@ async function offerUpdate(
   gh: NonNullable<PinDeps['gh']> | CliCtx['gh'],
   meta: SkillMeta,
 ): Promise<void> {
-  const dir = await gh
-    .findSkillDirs({ owner: meta.source.owner!, repo: meta.source.repo! })
-    .then((dirs) => dirs.find((d) => d.split('/').pop() === meta.source.skillId))
-    .catch(() => undefined);
+  const dir = await findDirForSkill(gh as any, { owner: meta.source.owner!, repo: meta.source.repo! }, meta.source.skillId!);
   const files = await gh.downloadDir(
     { owner: meta.source.owner!, repo: meta.source.repo! },
     dir ?? meta.source.path ?? '.',
