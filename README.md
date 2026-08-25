@@ -10,14 +10,16 @@ Claude Code, OpenCode, Codex, Cursor, `.agents` and more.
 ## Install
 
 ```bash
-npm i -g skillbase
+npm i -g @aldinal21/skillbase
 ```
 
 or run ad hoc:
 
 ```bash
-npx skillbase
+npx @aldinal21/skillbase
 ```
+
+(the global command is `skillbase` either way)
 
 ## Quickstart
 
