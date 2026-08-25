@@ -13,6 +13,7 @@ import { runScan } from './commands/scan.js';
 import { runNew } from './commands/new.js';
 import { runConfig } from './commands/config-cmd.js';
 import { runMigrate } from './commands/migrate.js';
+import { runDoctor } from './commands/doctor.js';
 import { maybeCheckForUpdates } from './core/updater.js';
 
 const VERSION = '0.1.0';
@@ -180,6 +181,20 @@ export function createProgram(): Command {
       try {
         const ctx = await ensureContext(clackIo());
         await runMigrate(clackIo(), ctx, cmdOpts);
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('doctor')
+    .description('Verify vault integrity (hashes, deployments, orphans)')
+    .action(async () => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        const issueCount = await runDoctor(clackIo(), ctx);
+        if (issueCount > 0) process.exitCode = 1;
       } catch (e) {
         if (e instanceof CancelledError) return;
         throw e;
