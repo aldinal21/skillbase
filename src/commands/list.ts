@@ -12,7 +12,9 @@ export async function runList(io: CliIo, ctx: CliCtx, _opts: {} = {}): Promise<v
   }
   const rows = metas.map((m) => [
     m.slug,
-    m.source.type === 'registry' ? `${m.source.owner}/${m.source.repo}` : 'local',
+    m.source.type === 'registry'
+      ? picocolors.green(`✓ ${m.source.owner}/${m.source.repo}`)
+      : picocolors.dim('local'),
     m.updatedAt.slice(0, 10),
     String(m.deployments.length),
     m.external ? 'external' : m.deployments.length > 0 ? 'deployed' : 'vault-only',

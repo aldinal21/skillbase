@@ -34,51 +34,94 @@ async function setup() {
   return { vault, ctx: { cfgPath: path.join(root, 'config.json'), cfg, vault, gh } as any, gh };
 }
 
+const deps = (gh: any) => ({ search: searchFetch(), gh, interactive: true });
+
 describe('runPin', () => {
-  it('lists local skills, lets user pick candidate and source, without updating', async () => {
+  it('multiselects skills, picks candidate and source, keeps content when declining update', async () => {
     const { vault, ctx, gh } = await setup();
     const { io, out } = createTestIo({
-      selects: ['tdd', 'a/s/tdd'], // pick skill, then pick source candidate
-      confirms: [false], // update now? no
+      multis: [['tdd']],
+      selects: ['a/s/tdd'],
+      confirms: [false, false], // update now? no; pin more? no
     });
-    await runPin(io, ctx, {}, { search: searchFetch(), gh, interactive: true });
+    await runPin(io, ctx, {}, deps(gh));
     const meta = await vault.get('tdd');
     expect(meta!.source).toMatchObject({ type: 'registry', owner: 'a', repo: 's', skillId: 'tdd' });
-    expect(await vault.readFiles('tdd')).toEqual([{ path: 'SKILL.md', contents: OLD_DOC }]); // untouched
-    expect(out.join('\n')).toMatch(/skillbase update/i);
+    expect(await vault.readFiles('tdd')).toEqual([{ path: 'SKILL.md', contents: OLD_DOC }]);
+    expect(out.join('\n')).toMatch(/skillbase update/);
   });
 
   it('updates to latest when user opts in', async () => {
     const { vault, ctx, gh } = await setup();
-    const { io } = createTestIo({ selects: ['tdd', 'b/e/tdd'], confirms: [true, true] });
-    await runPin(io, ctx, {}, { search: searchFetch(), gh, interactive: true });
+    const { io } = createTestIo({
+      multis: [['tdd']],
+      selects: ['b/e/tdd'],
+      confirms: [true, true], // update now? yes; apply? yes
+    });
+    await runPin(io, ctx, {}, deps(gh));
     const meta = await vault.get('tdd');
     expect(meta!.source).toMatchObject({ owner: 'b', repo: 'e' });
     expect(await vault.readFiles('tdd')).toEqual([{ path: 'SKILL.md', contents: NEW_DOC }]);
   });
 
-  it('explicit slug argument skips the skill picker', async () => {
+  it('explicit slug skips the multiselect', async () => {
     const { vault, ctx, gh } = await setup();
     const { io } = createTestIo({ selects: ['a/s/tdd'], confirms: [false] });
-    await runPin(io, ctx, { slug: 'tdd' }, { search: searchFetch(), gh, interactive: true });
+    await runPin(io, ctx, { slug: 'tdd' }, deps(gh));
     expect((await vault.get('tdd'))!.source.type).toBe('registry');
   });
 
   it('refuses already-tracked skills', async () => {
     const { vault, ctx, gh } = await setup();
-    await vault.get('tdd')!.then(async (m) => {
-      m!.source = { type: 'registry', owner: 'x', repo: 'y', skillId: 'tdd' };
-      await vault.saveMeta(m!);
-    });
+    const m = (await vault.get('tdd'))!;
+    m.source = { type: 'registry', owner: 'x', repo: 'y', skillId: 'tdd' };
+    await vault.saveMeta(m);
     const { io, out } = createTestIo({});
-    await runPin(io, ctx, { slug: 'tdd' }, { search: searchFetch(), gh, interactive: true });
-    expect(out.join('\n')).toMatch(/already tracked/i);
+    await runPin(io, ctx, { slug: 'tdd' }, deps(gh));
+    expect(out.join('\n')).toMatch(/already linked/i);
   });
 
-  it('skip choice leaves skill untouched', async () => {
+  it('skip choice leaves skill untouched and exits without pin-more prompt', async () => {
     const { vault, ctx, gh } = await setup();
-    const { io } = createTestIo({ selects: ['tdd', '__skip__'] });
-    await runPin(io, ctx, {}, { search: searchFetch(), gh, interactive: true });
+    const { io } = createTestIo({ multis: [['tdd']], selects: ['__skip__'] });
+    await runPin(io, ctx, {}, deps(gh));
     expect((await vault.get('tdd'))!.source.type).toBe('local');
+  });
+
+  it('loops back when user wants to pin more', async () => {
+    const root = await mkTmp();
+    const vault = new Vault(path.join(root, 'vault'));
+    await vault.install('tdd', [{ path: 'SKILL.md', contents: OLD_DOC }], { type: 'local' });
+    await vault.install('zdd', [{ path: 'SKILL.md', contents: '---\nname: zdd\ndescription: d\n---\nz' }], {
+      type: 'local',
+    });
+    const cfg: AppConfig = {
+      version: 1,
+      vaultPath: path.join(root, 'vault'),
+      targets: [],
+      updateCheck: { intervalHours: 24, lastCheck: null },
+    };
+    const gh = {
+      findSkillDirs: async () => ['skills/x'],
+      downloadDir: async () => [{ path: 'SKILL.md', contents: 'x' }],
+    } as any;
+    const ctx = { cfgPath: path.join(root, 'config.json'), cfg, vault, gh } as any;
+    const { io, out } = createTestIo({
+      multis: [['tdd'], ['zdd']],
+      selects: ['a/s/tdd', 'a/s/zdd'],
+      confirms: [false, true, false], // update?no, pin-more?yes, update?no (then all tracked → done)
+    });
+    await runPin(io, ctx, { }, {
+      search: (async (url: any) => {
+        const q = decodeURIComponent(String(url).match(/q=([^&]+)/)?.[1] ?? '');
+        const skills = q === 'tdd' ? CANDIDATES : [{ id: 'a/s/zdd', skillId: 'zdd', name: 'zdd', installs: 1, source: 'a/s' }];
+        return new Response(JSON.stringify({ skills }), { status: 200 });
+      }) as typeof fetch,
+      gh,
+      interactive: true,
+    });
+    expect((await vault.get('tdd'))!.source.type).toBe('registry');
+    expect((await vault.get('zdd'))!.source.type).toBe('registry');
+    expect(out.join('\n')).toMatch(/Pin more/);
   });
 });

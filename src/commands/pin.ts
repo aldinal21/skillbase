@@ -6,12 +6,15 @@ import { lineDiff } from '../ui/diff.js';
 import { formatInstalls } from '../ui/format.js';
 import type { CliCtx } from '../context.js';
 import type { CliIo } from '../ui/io.js';
+import type { SkillMeta } from '../types.js';
 
 export interface PinDeps {
   interactive?: boolean;
   search?: typeof fetch;
   gh?: CliCtx['gh'];
 }
+
+type PinResult = 'linked' | 'skipped' | 'failed';
 
 export async function runPin(
   io: CliIo,
@@ -22,37 +25,75 @@ export async function runPin(
   const interactive = deps.interactive ?? Boolean(process.stdin.isTTY);
   const gh = deps.gh ?? ctx.gh;
 
-  const locals = (await ctx.vault.list()).filter((m) => m.source.type === 'local' && !m.external);
-  if (!opts.slug && locals.length === 0) {
-    io.info('No local (untracked) skills in the vault.');
+  // Explicit slug: single pass, no loop
+  if (opts.slug) {
+    await pinOne(io, ctx, gh, opts.slug, 1, 1, deps, interactive);
     return;
   }
 
-  // 1. Pick the skill (unless slug given)
-  let slug = opts.slug;
-  if (!slug) {
-    if (!interactive) {
-      io.error('Non-interactive usage: skillbase pin <slug>');
+  if (!interactive) {
+    io.error('Non-interactive usage: skillbase pin <slug>');
+    return;
+  }
+
+  for (;;) {
+    const locals = (await ctx.vault.list()).filter((m) => m.source.type === 'local' && !m.external);
+    if (locals.length === 0) {
+      io.outro('All vault skills are tracked to skills.sh — nothing left to pin.');
       return;
     }
-    slug = await io.select({
-      message: 'Which local skill do you want to link to skills.sh?',
+    const picked = await io.multiselect({
+      message: `Pin which skill(s)? (${locals.length} untracked)`,
       options: locals.map((m) => ({ value: m.slug, label: `${m.slug} — ${m.description.slice(0, 60)}` })),
     });
+    if (picked.length === 0) {
+      io.info('Nothing selected — done.');
+      return;
+    }
+    let linked = 0;
+    for (let i = 0; i < picked.length; i++) {
+      const res = await pinOne(io, ctx, gh, picked[i]!, i + 1, picked.length, deps, interactive);
+      if (res === 'linked') linked++;
+    }
+    if (linked === 0) {
+      io.info('Nothing linked — done.');
+      return;
+    }
+    const remaining = (await ctx.vault.list()).filter((m) => m.source.type === 'local' && !m.external).length;
+    if (remaining === 0) {
+      io.outro(picocolors.green('Done — every vault skill is now tracked to skills.sh.'));
+      return;
+    }
+    if (!(await io.confirm({ message: `Pin more? (${remaining} untracked left)` }))) {
+      io.outro(`Done — ${linked} skill(s) linked this session.`);
+      return;
+    }
   }
+}
+
+async function pinOne(
+  io: CliIo,
+  ctx: CliCtx,
+  gh: NonNullable<PinDeps['gh']> | CliCtx['gh'],
+  slug: string,
+  index: number,
+  total: number,
+  deps: PinDeps,
+  interactive: boolean,
+): Promise<PinResult> {
+  const prefix = total > 1 ? picocolors.dim(`[${index}/${total}] `) : '';
   const meta = await ctx.vault.get(slug);
   if (!meta) {
-    io.error(`"${slug}" is not in the vault`);
-    return;
+    io.error(`${prefix}"${slug}" is not in the vault`);
+    return 'failed';
   }
   if (meta.source.type !== 'local') {
-    io.error(`"${slug}" is already tracked (${meta.source.owner}/${meta.source.repo})`);
-    return;
+    io.info(`${prefix}${picocolors.bold(slug)} ${picocolors.green('✓')} already linked to ${meta.source.owner}/${meta.source.repo}`);
+    return 'skipped';
   }
 
-  // 2. Search registry and show ALL candidates for the user to judge
   const sp = io.spinner();
-  sp.start(`Searching skills.sh for "${slug}"…`);
+  sp.start(`${prefix}Searching skills.sh for "${slug}"…`);
   let results: SearchResult[] = [];
   try {
     results = await searchSkills(slug, 50, deps.search ?? fetch);
@@ -62,17 +103,13 @@ export async function runPin(
     sp.stop();
   }
   if (results.length === 0) {
-    io.warn(`No candidates found for "${slug}" on skills.sh — staying local.`);
-    return;
-  }
-  if (!interactive) {
-    io.error('Candidate picking needs a terminal — run `skillbase pin` interactively.');
-    return;
+    io.warn(`${prefix}No candidates for "${slug}" on skills.sh — staying local.`);
+    return 'skipped';
   }
 
   const SKIP = '__skip__';
   const picked = await io.select({
-    message: `Which one is "${slug}"?`,
+    message: `${prefix}Which one is "${slug}"?`,
     options: [
       ...results.map((r) => ({
         value: r.id,
@@ -82,40 +119,47 @@ export async function runPin(
     ],
   });
   if (picked === SKIP) {
-    io.info('Left as local.');
-    return;
+    io.info(`${prefix}Kept ${picocolors.bold(slug)} as local.`);
+    return 'skipped';
   }
   const chosen = results.find((r) => r.id === picked)!;
-
-  // 3. Attach source
   const updated = await attachRegistrySource(ctx.vault, gh, meta, chosen);
   io.info(
-    `Linked ${picocolors.bold(slug)} → ${chosen.source}@${chosen.skillId} — now covered by 'skillbase update'`,
+    `${prefix}${picocolors.green('✓')} ${picocolors.bold(slug)} → ${chosen.source}@${chosen.skillId} — now covered by 'skillbase update'`,
   );
 
-  // 4. Optional immediate update
   if (interactive && (await io.confirm({ message: 'Update to the latest version now?' }))) {
-    const dir = await gh
-      .findSkillDirs({ owner: updated.source.owner!, repo: updated.source.repo! })
-      .then((dirs) => dirs.find((d) => d.split('/').pop() === updated.source.skillId))
-      .catch(() => undefined);
-    const files = await gh.downloadDir(
-      { owner: updated.source.owner!, repo: updated.source.repo! },
-      dir ?? updated.source.path ?? '.',
-    );
-    const cur = await ctx.vault.readFiles(slug);
-    const s = summarizeChanges(cur, files);
-    io.info(picocolors.dim(`Changes: +${s.added.length} ~${s.changed.length} -${s.removed.length} files`));
-    const mdCur = cur.find((f) => f.path === 'SKILL.md')?.contents ?? '';
-    const mdNew = files.find((f) => f.path === 'SKILL.md')?.contents ?? '';
-    const d = lineDiff(mdCur, mdNew, 30);
-    for (const l of d.removed) io.info(picocolors.red(`- ${l}`));
-    for (const l of d.added) io.info(picocolors.green(`+ ${l}`));
-    if (await io.confirm({ message: 'Apply this update?' })) {
-      await applyUpdate(ctx.vault, { meta: updated, latest: files, latestHash: updated.contentHash });
-      io.outro(`Updated ${picocolors.bold(slug)} to latest.`);
-      return;
-    }
+    await offerUpdate(io, ctx, gh, updated);
+  }
+  return 'linked';
+}
+
+async function offerUpdate(
+  io: CliIo,
+  ctx: CliCtx,
+  gh: NonNullable<PinDeps['gh']> | CliCtx['gh'],
+  meta: SkillMeta,
+): Promise<void> {
+  const dir = await gh
+    .findSkillDirs({ owner: meta.source.owner!, repo: meta.source.repo! })
+    .then((dirs) => dirs.find((d) => d.split('/').pop() === meta.source.skillId))
+    .catch(() => undefined);
+  const files = await gh.downloadDir(
+    { owner: meta.source.owner!, repo: meta.source.repo! },
+    dir ?? meta.source.path ?? '.',
+  );
+  const cur = await ctx.vault.readFiles(meta.slug);
+  const s = summarizeChanges(cur, files);
+  io.info(picocolors.dim(`Changes: +${s.added.length} ~${s.changed.length} -${s.removed.length} files`));
+  const mdCur = cur.find((f) => f.path === 'SKILL.md')?.contents ?? '';
+  const mdNew = files.find((f) => f.path === 'SKILL.md')?.contents ?? '';
+  const d = lineDiff(mdCur, mdNew, 30);
+  for (const l of d.removed) io.info(picocolors.red(`- ${l}`));
+  for (const l of d.added) io.info(picocolors.green(`+ ${l}`));
+  if (await io.confirm({ message: 'Apply this update?' })) {
+    await applyUpdate(ctx.vault, { meta, latest: files, latestHash: meta.contentHash });
+    io.outro(`Updated ${picocolors.bold(meta.slug)} to latest.`);
+  } else {
     io.info('Kept current content — diff will show up in skillbase update.');
   }
 }
