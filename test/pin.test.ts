@@ -122,6 +122,6 @@ describe('runPin', () => {
     });
     expect((await vault.get('tdd'))!.source.type).toBe('registry');
     expect((await vault.get('zdd'))!.source.type).toBe('registry');
-    expect(out.join('\n')).toMatch(/Pin more/);
+    expect(out.join('\n')).toMatch(/every vault skill is now tracked/i);
   });
 });
