@@ -14,6 +14,7 @@ import { runNew } from './commands/new.js';
 import { runConfig } from './commands/config-cmd.js';
 import { runMigrate } from './commands/migrate.js';
 import { runDoctor } from './commands/doctor.js';
+import { runPin } from './commands/pin.js';
 import { maybeCheckForUpdates } from './core/updater.js';
 
 const VERSION = '0.1.0';
@@ -195,6 +196,20 @@ export function createProgram(): Command {
         const ctx = await ensureContext(clackIo());
         const issueCount = await runDoctor(clackIo(), ctx);
         if (issueCount > 0) process.exitCode = 1;
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('pin')
+    .argument('[slug]', 'vault skill to link (interactive picker when omitted)')
+    .description('Link a local vault skill to its skills.sh source (interactive)')
+    .action(async (slug?: string) => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runPin(clackIo(), ctx, { slug });
       } catch (e) {
         if (e instanceof CancelledError) return;
         throw e;
