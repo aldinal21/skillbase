@@ -50,6 +50,15 @@ describe('checkUpdates + applyUpdate', () => {
     const outdated = await checkUpdates(vault, async () => v2, { timeoutMs: 200 });
     expect(outdated).toHaveLength(0);
   });
+
+  it('skips upstream snapshots without SKILL.md (source anomaly)', async () => {
+    const root = await mkTmp();
+    const vault = new Vault(path.join(root, 'vault'));
+    await vault.install('tdd', v1, src);
+    const junk: FetchedFile[] = [{ path: 'README.md', contents: 'repo without skills' }];
+    const outdated = await checkUpdates(vault, async () => junk, { timeoutMs: 200 });
+    expect(outdated).toHaveLength(0);
+  });
 });
 
 describe('maybeCheckForUpdates', () => {

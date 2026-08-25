@@ -123,13 +123,28 @@ async function pinOne(
     return 'skipped';
   }
   const chosen = results.find((r) => r.id === picked)!;
-  const updated = await attachRegistrySource(ctx.vault, gh, meta, chosen);
+  let updated: SkillMeta | null = null;
+  try {
+    updated = await attachRegistrySource(ctx.vault, gh, meta, chosen);
+  } catch {
+    updated = null;
+  }
+  if (!updated) {
+    io.warn(
+      `${prefix}Repo ${picocolors.bold(chosen.source)} has no "${chosen.skillId}" folder at HEAD — cannot track updates. Kept local.`,
+    );
+    return 'skipped';
+  }
   io.info(
     `${prefix}${picocolors.green('✓')} ${picocolors.bold(slug)} → ${chosen.source}@${chosen.skillId} — now covered by 'skillbase update'`,
   );
 
   if (interactive && (await io.confirm({ message: 'Update to the latest version now?' }))) {
-    await offerUpdate(io, ctx, gh, updated);
+    try {
+      await offerUpdate(io, ctx, gh, updated);
+    } catch (e) {
+      io.error(`Update failed, skill stays linked: ${(e as Error).message}`);
+    }
   }
   return 'linked';
 }

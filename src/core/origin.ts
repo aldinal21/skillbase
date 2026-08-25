@@ -17,16 +17,18 @@ export async function matchRegistrySkill(slug: string, fetchImpl: typeof fetch =
   return { kind: 'ambiguous', candidates: exact };
 }
 
-/** Upgrade an adopted (local) skill to registry-tracked: sets source and resolves the repo-internal dir. */
+/** Upgrade an adopted (local) skill to registry-tracked. Returns null when the repo HEAD
+ * does not actually contain the skill (registry snapshots can outlive repos). */
 export async function attachRegistrySource(
   vault: Vault,
   gh: Pick<GithubClient, 'findSkillDirs'>,
   meta: SkillMeta,
   match: SearchResult,
-): Promise<SkillMeta> {
+): Promise<SkillMeta | null> {
   const [owner, repo] = match.source.split('/');
   const dirs = await gh.findSkillDirs({ owner: owner!, repo: repo! });
-  const dir = dirs.find((d) => d.split('/').pop() === match.skillId) ?? '';
+  const dir = dirs.find((d) => d.split('/').pop() === match.skillId);
+  if (dir === undefined) return null;
   meta.source = { type: 'registry', owner: owner!, repo: repo!, path: dir, skillId: match.skillId };
   await vault.saveMeta(meta);
   return meta;

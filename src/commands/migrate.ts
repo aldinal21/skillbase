@@ -102,8 +102,13 @@ export async function runMigrate(
       origin = { kind: 'none' };
     }
     if (origin.kind === 'unique') {
-      await attachRegistrySource(ctx.vault, gh, meta, origin.match);
-      tracked++;
+      const attached = await attachRegistrySource(ctx.vault, gh, meta, origin.match).catch(() => null);
+      if (attached) {
+        tracked++;
+      } else {
+        local++;
+        io.warn(`"${slug}" listed on skills.sh but missing from ${origin.match.source} at HEAD — kept local`);
+      }
     } else if (origin.kind === 'ambiguous') {
       ambiguous.push({
         slug,

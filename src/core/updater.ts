@@ -41,6 +41,9 @@ export async function checkUpdates(
   const timeoutMs = opts.timeoutMs ?? 2000;
   const jobs = tracked.map(async (meta) => {
     const latest = await downloadDir(refOf(meta), meta.source.path ?? '.');
+    // Source anomaly guard: upstream snapshot without a SKILL.md is not a skill — skip it.
+    const hasSkillMd = latest.some((f) => f.path === 'SKILL.md' || f.path.endsWith('/SKILL.md'));
+    if (!hasSkillMd) return null;
     const latestHash = await hashSkillFiles(latest);
     if (latestHash === meta.contentHash) return null;
     return { meta, latest, latestHash } satisfies UpdateCandidate;

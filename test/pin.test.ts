@@ -88,6 +88,17 @@ describe('runPin', () => {
     expect((await vault.get('tdd'))!.source.type).toBe('local');
   });
 
+  it('stays local (no crash) when picked repo has no SKILL.md at HEAD', async () => {
+    const { vault, ctx } = await setup();
+    const badGh = { findSkillDirs: async () => [] } as any; // graphify-labs/graphify situation
+    const { io, out } = createTestIo({ multis: [['tdd']], selects: ['a/s/tdd'] });
+    await runPin(io, ctx, {}, { search: searchFetch(), gh: badGh, interactive: true });
+    const joined = out.join('\n');
+    expect(joined).toMatch(/no .+tdd. folder at HEAD/i);
+    expect((await vault.get('tdd'))!.source.type).toBe('local');
+    void vault;
+  });
+
   it('loops back when user wants to pin more', async () => {
     const root = await mkTmp();
     const vault = new Vault(path.join(root, 'vault'));
@@ -102,7 +113,7 @@ describe('runPin', () => {
       updateCheck: { intervalHours: 24, lastCheck: null },
     };
     const gh = {
-      findSkillDirs: async () => ['skills/x'],
+      findSkillDirs: async () => ['skills/tdd', 'skills/zdd'],
       downloadDir: async () => [{ path: 'SKILL.md', contents: 'x' }],
     } as any;
     const ctx = { cfgPath: path.join(root, 'config.json'), cfg, vault, gh } as any;

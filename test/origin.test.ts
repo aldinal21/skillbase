@@ -53,7 +53,24 @@ describe('attachRegistrySource', () => {
       installs: 10,
       source: 'o/r',
     });
-    expect(updated.source).toMatchObject({ type: 'registry', owner: 'o', repo: 'r', path: 'skills/tdd', skillId: 'tdd' });
+    expect(updated!.source).toMatchObject({ type: 'registry', owner: 'o', repo: 'r', path: 'skills/tdd', skillId: 'tdd' });
     expect((await vault.get('tdd'))!.source.type).toBe('registry');
   });
+
+  it('returns null (and keeps local) when repo HEAD lacks the skill', async () => {
+    const root = await mkTmp();
+    const vault = new Vault(path.join(root, 'vault'));
+    const meta = await vault.install('graphify', [{ path: 'SKILL.md', contents: DOC }], { type: 'local' });
+    const gh = { findSkillDirs: async () => [] }; // e.g. graphify-labs/graphify: no SKILL.md anywhere
+    const result = await attachRegistrySource(vault, gh as any, meta, {
+      id: 'graphify-labs/graphify/graphify',
+      skillId: 'graphify',
+      name: 'graphify',
+      installs: 5537,
+      source: 'graphify-labs/graphify',
+    });
+    expect(result).toBeNull();
+    expect((await vault.get('graphify'))!.source.type).toBe('local');
+  });
 });
+

@@ -38,7 +38,7 @@ async function setup() {
     targets: [{ id: 't1', name: 'Targets', path: targetPath, type: 'custom', active: true }],
     updateCheck: { intervalHours: 24, lastCheck: null },
   };
-  const gh = { findSkillDirs: async () => [`skills/${'x'}`] } as any; // origin dir resolution not asserted here
+  const gh = { findSkillDirs: async () => ['skills/alpha', 'skills/beta', 'skills/gamma', 'skills/dup'] } as any;
   const ctx: any = { cfgPath: path.join(root, 'config.json'), cfg, vault, gh };
   const deps = {
     interactive: true,
