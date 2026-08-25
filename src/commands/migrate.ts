@@ -126,7 +126,7 @@ export async function runMigrate(
     ]),
   );
   for (const a of ambiguous) {
-    io.warn(`Ambiguous "${picocolors.bold(a.slug)}" — pin one with: skillbase add <owner/repo@${a.slug}>`);
+    io.warn(`Ambiguous "${picocolors.bold(a.slug)}" — pick the right source with: skillbase pin ${a.slug}`);
     for (const c of a.candidates) io.info(`    ${picocolors.dim(c)}`);
   }
   io.outro('Migration complete.');
