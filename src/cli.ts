@@ -15,9 +15,10 @@ import { runConfig } from './commands/config-cmd.js';
 import { runMigrate } from './commands/migrate.js';
 import { runDoctor } from './commands/doctor.js';
 import { runPin } from './commands/pin.js';
+import { runDeploy } from './commands/deploy.js';
 import { maybeCheckForUpdates } from './core/updater.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -196,6 +197,21 @@ export function createProgram(): Command {
         const ctx = await ensureContext(clackIo());
         const issueCount = await runDoctor(clackIo(), ctx);
         if (issueCount > 0) process.exitCode = 1;
+      } catch (e) {
+        if (e instanceof CancelledError) return;
+        throw e;
+      }
+    });
+
+  program
+    .command('deploy')
+    .option('-t, --targets <ids...>', 'deploy to these target ids (non-interactive)')
+    .option('-y, --yes', 'deploy to all active targets without prompting')
+    .description('Deploy all vault skills to one or more targets')
+    .action(async (cmdOpts: { targets?: string[]; yes?: boolean }) => {
+      try {
+        const ctx = await ensureContext(clackIo());
+        await runDeploy(clackIo(), ctx, cmdOpts);
       } catch (e) {
         if (e instanceof CancelledError) return;
         throw e;

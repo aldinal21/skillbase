@@ -1,6 +1,6 @@
 {
   "name": "@aldinal21/skillbase",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Vault-based AI agent skill manager — install skills.sh skills to Claude Code, OpenCode, .agents and more",
   "license": "MIT",
   "type": "module",

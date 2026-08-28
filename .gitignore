@@ -3,4 +3,5 @@ dist/
 *.exe
 skillbase.db
 .superpowers/
-docs/superpowers/plans/*.bak
+docs/superpowers/
+

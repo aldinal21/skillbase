@@ -43,13 +43,16 @@ export async function runTargets(io: CliIo, ctx: CliCtx): Promise<void> {
     if (action === 'done') break;
     if (action === 'preset') {
       const installed = await detectInstalledPresets();
-      const pool = installed.length > 0 ? installed : AGENT_PRESETS;
+      const installedKeys = new Set(installed.map((p) => p.key));
       const picks = await io.multiselect({
         message: 'Choose presets',
-        options: pool.map((p) => ({ value: p.key, label: p.name })),
+        options: AGENT_PRESETS.map((p) => ({
+          value: p.key,
+          label: installedKeys.has(p.key) ? `${p.name} ✓` : p.name,
+        })),
       });
       for (const key of picks) {
-        const preset = pool.find((p) => p.key === key)!;
+        const preset = AGENT_PRESETS.find((p) => p.key === key)!;
         ctx.cfg = addTargetById(ctx.cfg, preset);
       }
     } else if (action === 'custom') {
