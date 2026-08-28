@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { saveConfig } from './config.js';
+import { rewriteSkillName } from './frontmatter.js';
 import { deploy } from './sync.js';
 import { Vault, hashSkillFiles } from './vault.js';
 import type { AppConfig, FetchedFile, SkillMeta } from '../types.js';
@@ -44,9 +45,12 @@ export async function checkUpdates(
     // Source anomaly guard: upstream snapshot without a SKILL.md is not a skill — skip it.
     const hasSkillMd = latest.some((f) => f.path === 'SKILL.md' || f.path.endsWith('/SKILL.md'));
     if (!hasSkillMd) return null;
-    const latestHash = await hashSkillFiles(latest);
+    // Skills installed with a namespaced frontmatter keep that identity across updates:
+    // normalize upstream to the local name before hashing so we only see real changes.
+    const normalized = meta.originalName !== undefined ? rewriteSkillName(latest, meta.slug) : latest;
+    const latestHash = await hashSkillFiles(normalized);
     if (latestHash === meta.contentHash) return null;
-    return { meta, latest, latestHash } satisfies UpdateCandidate;
+    return { meta, latest: normalized, latestHash } satisfies UpdateCandidate;
   });
   const settled = await Promise.allSettled(jobs.map((p) => timeoutRace(p, timeoutMs)));
   return settled

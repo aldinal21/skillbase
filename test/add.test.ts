@@ -52,12 +52,30 @@ describe('runAdd', () => {
   });
 
   it('adds from fake github source with skill name', async () => {
-    const { vault, ctx } = await setup();
+    const { root, vault, ctx } = await setup();
     const gh = fakeGh(['skills/tdd']);
     const { io } = createTestIo({ confirms: [true], multis: [[]] });
     const meta = await runAdd(io, ctx, { source: 'o/r@tdd' }, { gh });
-    expect(meta?.slug).toBe('tdd');
-    expect((await vault.readFiles('tdd')).map((f) => f.path)).toContain('refs/a.md');
+    expect(meta?.slug).toBe('tdd-o'); // registry installs are namespaced as <name>-<owner>
+    expect(meta?.originalName).toBe('tdd');
+    const paths = (await vault.readFiles('tdd-o')).map((f) => f.path);
+    expect(paths).toContain('refs/a.md');
+    const skillMd = (await vault.readFiles('tdd-o')).find((f) => f.path === 'SKILL.md')!;
+    expect(skillMd.contents).toContain('name: tdd-o');
+    await expect(fs.readFile(path.join(root, 'target', 'tdd-o', 'SKILL.md'), 'utf8')).rejects.toThrow(); // not deployed (empty multiselect)
+  });
+
+  it('uses numeric suffix when the namespaced slug collides', async () => {
+    const { vault, ctx } = await setup();
+    await vault.install(
+      'tdd-o',
+      [{ path: 'SKILL.md', contents: DOC.replace('name: tdd', 'name: tdd-o') }],
+      { type: 'registry', owner: 'o', repo: 'other', path: 'skills/tdd', skillId: 'tdd' },
+    );
+    const gh = fakeGh(['skills/tdd']);
+    const { io } = createTestIo({ confirms: [true, false], multis: [[]] }); // add=yes, overwrite=no
+    const meta = await runAdd(io, ctx, { source: 'o/r@tdd' }, { gh });
+    expect(meta?.slug).toBe('tdd-o-2');
   });
 
   it('auto-renames on collision when not overwriting', async () => {

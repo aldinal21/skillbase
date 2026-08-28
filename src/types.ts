@@ -25,6 +25,8 @@ export interface SkillMeta {
   installedAt: string;
   updatedAt: string;
   external?: boolean;
+  /** Upstream `name` before namespacing; present only when the frontmatter was rewritten at install time. */
+  originalName?: string;
 }
 
 export interface FetchedFile {

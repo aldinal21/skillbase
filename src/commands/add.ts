@@ -3,7 +3,7 @@ import path from 'node:path';
 import picocolors from 'picocolors';
 import { expandHome } from '../core/config.js';
 import { parseSource, findDirForSkill, type GithubClient } from '../core/github.js';
-import { FrontmatterError, validateSkillFolder } from '../core/frontmatter.js';
+import { FrontmatterError, rewriteSkillName, sanitizeSkillName, validateSkillFolder } from '../core/frontmatter.js';
 import { deploy } from '../core/sync.js';
 import { readTree } from '../core/vault.js';
 import type { CliCtx } from '../context.js';
@@ -14,12 +14,26 @@ export interface AddDeps {
   gh?: GithubClient;
 }
 
-async function uniqueSlug(vault: import('../core/vault.js').Vault, base: string, suffix: string): Promise<string> {
+async function uniqueSlug(
+  vault: import('../core/vault.js').Vault,
+  base: string,
+  suffix?: string,
+): Promise<string> {
   if (!(await vault.get(base))) return base;
+  if (suffix === undefined) {
+    let n = 2;
+    while (await vault.get(`${base}-${n}`)) n++;
+    return `${base}-${n}`;
+  }
   let candidate = `${base}-${suffix}`;
   let n = 2;
   while (await vault.get(candidate)) candidate = `${base}-${suffix}-${n++}`;
   return candidate;
+}
+
+/** Registry installs are namespaced `<name>-<owner>` so same-named skills from different authors stay distinct. */
+function namespacedName(name: string, source: SkillSource): string {
+  return source.type === 'registry' && source.owner ? sanitizeSkillName(`${name}-${source.owner}`) : name;
 }
 
 export async function runAdd(
@@ -79,6 +93,13 @@ export async function runAdd(
 
     const { skill } = validateSkillFolder(files);
     io.info(picocolors.bold(skill.name) + picocolors.dim(` — ${skill.description}`));
+    io.info(
+      picocolors.dim(
+        source.type === 'registry'
+          ? `source: ${source.owner}/${source.repo}${source.ref ? `@${source.ref}` : ''}`
+          : 'source: local',
+      ),
+    );
     io.info(picocolors.dim(files.map((f) => f.path).join(', ')));
 
     if (!opts.yes) {
@@ -86,22 +107,19 @@ export async function runAdd(
       if (!ok) return null;
     }
 
-    const existing = await ctx.vault.get(skill.name);
+    const desired = namespacedName(skill.name, source);
+    const existing = await ctx.vault.get(desired);
     let slug: string;
     if (existing) {
-      const overwrite = await io.confirm({ message: `Skill "${skill.name}" already exists — overwrite?` });
-      if (overwrite) {
-        slug = skill.name;
-      } else {
-        const suffix = source.type === 'registry' ? source.owner! : 'local';
-        slug = await uniqueSlug(ctx.vault, skill.name, suffix);
-        io.info(`Using slug ${picocolors.bold(slug)} instead`);
-      }
+      const overwrite = await io.confirm({ message: `Skill "${desired}" already exists — overwrite?` });
+      slug = overwrite ? desired : await uniqueSlug(ctx.vault, desired, source.type === 'registry' ? undefined : 'local');
+      if (slug !== desired) io.info(`Using slug ${picocolors.bold(slug)} instead`);
     } else {
-      slug = skill.name;
+      slug = desired;
     }
 
-    const meta = await ctx.vault.install(slug, files, source);
+    files = rewriteSkillName(files, slug);
+    const meta = await ctx.vault.install(slug, files, source, source.type === 'registry' ? skill.name : undefined);
 
     const active = ctx.cfg.targets.filter((t) => t.active);
     let chosenIds: string[] = [];

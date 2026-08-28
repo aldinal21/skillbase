@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import path from 'node:path';
 import { Vault } from '../src/core/vault.js';
 import { applyUpdate, checkUpdates, maybeCheckForUpdates, summarizeChanges } from '../src/core/updater.js';
+import { rewriteSkillName } from '../src/core/frontmatter.js';
 import { mkTmp } from './helpers.js';
 import type { AppConfig, FetchedFile } from '../src/types.js';
 
@@ -58,6 +59,49 @@ describe('checkUpdates + applyUpdate', () => {
     const junk: FetchedFile[] = [{ path: 'README.md', contents: 'repo without skills' }];
     const outdated = await checkUpdates(vault, async () => junk, { timeoutMs: 200 });
     expect(outdated).toHaveLength(0);
+  });
+});
+
+describe('checkUpdates with namespaced installs (originalName set)', () => {
+  it('does not report false positives when upstream is unchanged', async () => {
+    const root = await mkTmp();
+    const vault = new Vault(path.join(root, 'vault'));
+    // Simulate the new add flow: upstream files get their name rewritten before install.
+    await vault.install('tdd-o', rewriteSkillName(v1, 'tdd-o'), src, 'tdd');
+
+    const outdated = await checkUpdates(vault, async () => v1, { timeoutMs: 500 });
+    expect(outdated).toHaveLength(0);
+  });
+
+  it('detects real changes, applies them, and keeps the local name stable', async () => {
+    const root = await mkTmp();
+    const vault = new Vault(path.join(root, 'vault'));
+    await vault.install('tdd-o', rewriteSkillName(v1, 'tdd-o'), src, 'tdd');
+
+    const outdated = await checkUpdates(vault, async () => v2, { timeoutMs: 500 });
+    expect(outdated).toHaveLength(1);
+    await applyUpdate(vault, outdated[0]!);
+
+    const files = await vault.readFiles('tdd-o');
+    const md = files.find((f) => f.path === 'SKILL.md')!.contents;
+    expect(md).toContain('name: tdd-o'); // local identity survives the update
+    expect(md).toContain('v2'); // body came from upstream
+  });
+
+  it('keeps the local name even when upstream renamed the skill', async () => {
+    const root = await mkTmp();
+    const vault = new Vault(path.join(root, 'vault'));
+    await vault.install('tdd-o', rewriteSkillName(v1, 'tdd-o'), src, 'tdd');
+
+    const renamed: FetchedFile[] = [
+      { path: 'SKILL.md', contents: '---\nname: test-driven-development\ndescription: d\n---\nv2' },
+    ];
+    const outdated = await checkUpdates(vault, async () => renamed, { timeoutMs: 500 });
+    expect(outdated).toHaveLength(1);
+    await applyUpdate(vault, outdated[0]!);
+    const md = (await vault.readFiles('tdd-o')).find((f) => f.path === 'SKILL.md')!.contents;
+    expect(md).toContain('name: tdd-o');
+    expect(md).not.toContain('test-driven-development');
   });
 });
 

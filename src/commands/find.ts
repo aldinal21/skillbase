@@ -74,7 +74,10 @@ export async function runFind(
   }
   const picked = await io.select({
     message: 'Select skill',
-    options: results.map((r) => ({ value: r.id, label: r.name })),
+    options: results.map((r) => ({
+      value: r.id,
+      label: r.source ? `${r.name} ${picocolors.dim(`(${r.source})`)}` : r.name,
+    })),
   });
   const chosen = results.find((r) => r.id === picked)!;
   const gh = deps.gh ?? _ctx.gh;

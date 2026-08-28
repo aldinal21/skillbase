@@ -96,7 +96,12 @@ export class Vault {
     return hashSkillFiles(await this.readFiles(slug));
   }
 
-  async install(slug: string, files: FetchedFile[], source: SkillSource): Promise<SkillMeta> {
+  async install(
+    slug: string,
+    files: FetchedFile[],
+    source: SkillSource,
+    originalName?: string,
+  ): Promise<SkillMeta> {
     const dir = this.dirOf(slug);
     assertSafePaths(dir, files);
     const { skill } = validateSkillFolder(files);
@@ -113,6 +118,7 @@ export class Vault {
       deployments: [],
       installedAt: now,
       updatedAt: now,
+      ...(originalName ? { originalName } : {}),
     };
     await this.saveMeta(meta);
     return meta;
